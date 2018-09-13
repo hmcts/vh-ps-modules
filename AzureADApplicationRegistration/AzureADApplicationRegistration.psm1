@@ -2,33 +2,34 @@
 #Requires -Module AzureAD
 #Requires -Module AzureRM.KeyVault
 
-[CmdletBinding()]
-param (
-    [String] 
-    [Parameter(Mandatory)]
-    $AzureTenantId,
-    [String]
-    [Parameter(Mandatory)]
-    $AzureAdAppId,
-    [string]
-    [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
-    $AzureAdAppCertificateThumbprint,
-    [String]
-    [Parameter(Mandatory)]
-    $AzureSubscriptionId,
-    [String]
-    [Parameter(Mandatory)]
-    $AzureADApplicationName        ,
-    [String]
-    [Parameter(Mandatory)]
-    $AzureKeyVaultName 
-)
-Invoke-AzureConnection -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint -AzureSubscriptionId $AzureSubscriptionId
+function Invoke-AzureADApplicationRegistration {
+    [CmdletBinding()]
+    param (
+        [String] 
+        [Parameter(Mandatory)]
+        $AzureTenantId,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureAdAppId,
+        [string]
+        [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
+        $AzureAdAppCertificateThumbprint,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureSubscriptionId,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureADApplicationName        ,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureKeyVaultName 
+    )
+    Invoke-AzureConnection -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint -AzureSubscriptionId $AzureSubscriptionId
 
-$AADRegApp = Add-AzureADApp -AADAppName  $AzureADApplicationName
+    $AADRegApp = Add-AzureADApp -AADAppName  $AzureADApplicationName
 
-Add-AzureADAppSecret -AzureKeyVaultName $AzureKeyVaultName -AADAppAsHashTable $AADRegApp -AADAppName $AzureADApplicationName
-
+    Add-AzureADAppSecret -AzureKeyVaultName $AzureKeyVaultName -AADAppAsHashTable $AADRegApp -AADAppName $AzureADApplicationName
+}
 
 function Invoke-AzureConnection {
     [CmdletBinding()]
@@ -122,13 +123,13 @@ function Add-AzureADAppSecret {
         [Parameter(Mandatory)]
         $AADAppAsHashTable
     )
-    foreach ($h in $AADAppAsHashTable.GetEnumerator()) {
+    foreach($h in $AADAppAsHashTable.GetEnumerator()){
         Write-Host "$($h.Key): $($h.Value)"
-        if ($AADAppName -ne $h.Value) {
+        if($AADAppName -ne $h.Value){
             if ($h.Value -eq (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($AADAppAsHashTable.AppName + $h.Name)).SecretValueText) {
                 Write-Output "Key/Value pair exists"
             }
-            else {
+            else{
                 Write-Output ("Adding {0} secret to key vault" -f ($AADAppAsHashTable.AppName + $h.Name))
                 $EncryptedSecret = ConvertTo-SecureString -String $h.value -AsPlainText -Force
                 Set-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($AADAppAsHashTable.AppName + $h.Name) -SecretValue $EncryptedSecret

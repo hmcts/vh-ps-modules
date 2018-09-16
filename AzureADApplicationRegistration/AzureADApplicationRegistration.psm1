@@ -19,11 +19,12 @@ function Invoke-AzureADApplicationRegistration {
         $AzureSubscriptionId,
         [String]
         [Parameter(Mandatory)]
-        $AzureADApplicationName        ,
+        $AzureADApplicationName,
         [String]
         [Parameter(Mandatory)]
         $AzureKeyVaultName 
     )
+
     Invoke-AzureConnection -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint -AzureSubscriptionId $AzureSubscriptionId
 
     $AADRegApp = Add-AzureADApp -AADAppName  $AzureADApplicationName
@@ -61,7 +62,8 @@ function Add-AzureADApp {
 
     )
     # Add ID and Replay urls
-    $AADAppNameForId = $AADAppName -replace '_', '-'
+    $AADAppName = $AADAppName.ToLower() -replace '-', '_'
+    $AADAppNameForId = $AADAppName.ToLower() -replace '_', '-'
     $AADAppIdentifierUris = "https://" + $AADAppNameForId + ".azurewebsites.net"
     $AADAppReplyUrls = $AADAppIdentifierUris
     # Create empty hash table
@@ -86,7 +88,7 @@ function Add-AzureADApp {
         $HashTable.Add("AppSPID", $AADAppSP.ObjectId)
 
         # Create key for AAD App
-        $AADAppKey = Add-AzureADAppKey -AADAppName $AADAppName
+        $AADAppKey = Add-AzureADAppKey -AADAppName $AADAppNameForId
         $HashTable.Add("Key", $AADAppKey)
     }
     return $HashTable
@@ -99,6 +101,7 @@ function Add-AzureADAppKey {
         $AADAppName
     )
     # Get AAD App
+    $AADAppName = $AADAppName.ToLower() -replace '-', '_'
     $AADApp = Get-AzureADApplication -SearchString $AADAppName
 
     # Set key's name
@@ -123,8 +126,8 @@ function Add-AzureADAppSecret {
         [Parameter(Mandatory)]
         $AADAppAsHashTable
     )
+    $AADAppName = $AADAppName.ToLower() -replace '_', '-'
     foreach($h in $AADAppAsHashTable.GetEnumerator()){
-        Write-Host "$($h.Key): $($h.Value)"
         if($AADAppName -ne $h.Value){
             if ($h.Value -eq (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($AADAppAsHashTable.AppName + $h.Name)).SecretValueText) {
                 Write-Output "Key/Value pair exists"

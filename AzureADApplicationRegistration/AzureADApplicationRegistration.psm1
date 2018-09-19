@@ -70,8 +70,6 @@ function Add-AzureADApp {
     $AADAppNameForId = $AADAppName.ToLower() -replace '_', '-'
     $AADAppIdentifierUris = "https://" + $AADAppNameForId + ".azurewebsites.net"
     $AADAppReplyUrls = $AADAppIdentifierUris
-    # Return function results
-    [bool]$hastableWithKey = $true
     # Create empty hash table
     $HashTable = @{}
 
@@ -88,7 +86,6 @@ function Add-AzureADApp {
 
         # Add AD App's SP to hash table
         $HashTable.Add("AppSPID", $AADAppSP.ObjectId)
-        [bool]$hastableWithKey = $false
     }
     else {
         # Create AAD App
@@ -106,7 +103,6 @@ function Add-AzureADApp {
         # Create key for AAD App
         $AADAppKey = Add-AzureADAppKey -AADAppName $AADAppNameForId
         $HashTable.Add("Key", $AADAppKey)
-        [bool]$hastableWithKey = $true
     }
     return $HashTable
 }

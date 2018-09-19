@@ -29,7 +29,11 @@ function Invoke-AzureADApplicationRegistration {
 
     $AADRegApp = Add-AzureADApp -AADAppName  $AzureADApplicationName
 
-    Add-AzureADAppSecret -AzureKeyVaultName $AzureKeyVaultName -AADAppAsHashTable $AADRegApp -AADAppName $AzureADApplicationName
+    Set-VSTSVariables -AADAppAsHashTable $AADRegApp
+
+    if ($AADRegApp.Key) {
+        Add-AzureADAppSecret -AzureKeyVaultName $AzureKeyVaultName -AADAppAsHashTable $AADRegApp -AADAppName $AzureADApplicationName
+    }
 }
 
 function Invoke-AzureConnection {
@@ -71,8 +75,17 @@ function Add-AzureADApp {
 
     # Register Azure AD App
     if ($AADAppName -eq (Get-AzureADApplication -SearchString $AADAppName).DisplayName -and (Get-AzureADApplication -SearchString $AADAppName).IdentifierUris -contains $AADAppIdentifierUris) {
-        Write-Output "Application $AADAppName found"
-        exit
+        Write-Verbose "Application $AADAppName found"
+        # Get App and App's SP
+        $AADApp = Get-AzureADApplication -SearchString $AADAppName
+        $AADAppSP = Get-AzureADServicePrincipal -SearchString $AADAppName
+        # Add details to hashtable
+        $HashTable.Add("AppName", $AADAppNameForId)
+        # Add App's ID to hast table
+        $HashTable.Add("AppID", $AADApp.AppId)
+
+        # Add AD App's SP to hash table
+        $HashTable.Add("AppSPID", $AADAppSP.ObjectId)
     }
     else {
         # Create AAD App
@@ -127,12 +140,12 @@ function Add-AzureADAppSecret {
         $AADAppAsHashTable
     )
     $AADAppName = $AADAppName.ToLower() -replace '_', '-'
-    foreach($h in $AADAppAsHashTable.GetEnumerator()){
-        if($AADAppName -ne $h.Value){
+    foreach ($h in $AADAppAsHashTable.GetEnumerator()) {
+        if ($AADAppName -ne $h.Value) {
             if ($h.Value -eq (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($AADAppAsHashTable.AppName + $h.Name)).SecretValueText) {
                 Write-Output "Key/Value pair exists"
             }
-            else{
+            else {
                 Write-Output ("Adding {0} secret to key vault" -f ($AADAppAsHashTable.AppName + $h.Name))
                 $EncryptedSecret = ConvertTo-SecureString -String $h.value -AsPlainText -Force
                 Set-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($AADAppAsHashTable.AppName + $h.Name) -SecretValue $EncryptedSecret
@@ -142,7 +155,15 @@ function Add-AzureADAppSecret {
     }
 }
 
+function Set-VSTSVariables {
+    param (
+        [Parameter(Mandatory)]
+        $AADAppAsHashTable
+    )
+    foreach ($h in $AADAppAsHashTable.GetEnumerator()) {
+        Write-Output ("##vso[task.setvariable variable={0};]{1}" -f ($AADAppAsHashTable.AppName + $h.Name), $h.Value) 
+    }    
+}
+
+
 Export-ModuleMember -Function 'Invoke-AzureADApplicationRegistration'
-
-
-#Invoke-MagicJohnson -AzureTenantId $ATId -AzureAdAppId $AAdAId -AzureAdAppCertificateThumbprint $ACTP -AzureSubscriptionId $ASId -AzureADApplicationName $AADAN -AzureKeyVaultName $AKVN

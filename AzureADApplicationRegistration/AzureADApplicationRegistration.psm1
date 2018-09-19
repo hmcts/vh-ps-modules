@@ -161,7 +161,8 @@ function Set-VSTSVariables {
         $AADAppAsHashTable
     )
     foreach ($h in $AADAppAsHashTable.GetEnumerator()) {
-        Write-Output ("##vso[task.setvariable variable={0};]{1}" -f ($AADAppAsHashTable.AppName + $h.Name), $h.Value) 
+        Write-Output ("##vso[task.setvariable variable={0};]{1}" -f ($AADAppAsHashTable.AppName + $h.Name), $h.Value)
+        Write-Output ("Created variable for {0}" -f ($AADAppAsHashTable.AppName + $h.Name))
     }    
 }
 

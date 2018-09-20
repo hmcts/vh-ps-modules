@@ -85,7 +85,7 @@ function Add-AzureADApp {
         $HashTable.Add("AppID", $AADApp.AppId)
 
         # Add AD App's SP to hash table
-        $HashTable.Add("AppSPID", $AADAppSP.ObjectId)
+        $HashTable.Add("AppSPObjectID", $AADAppSP.ObjectId)
     }
     else {
         # Create AAD App
@@ -98,7 +98,7 @@ function Add-AzureADApp {
         # Create SP for AAD App
         $AADAppSP = New-AzureADServicePrincipal -AppId $AADApp.AppId
         # Add AD App's SP to hash table
-        $HashTable.Add("AppSPID", $AADAppSP.ObjectId)
+        $HashTable.Add("AppSPObjectID", $AADAppSP.ObjectId)
 
         # Create key for AAD App
         $AADAppKey = Add-AzureADAppKey -AADAppName $AADAppNameForId
@@ -141,17 +141,16 @@ function Add-AzureADAppSecret {
     )
     $AADAppName = $AADAppName.ToLower() -replace '_', '-'
     foreach ($h in $AADAppAsHashTable.GetEnumerator()) {
-        if ($AADAppName -ne $h.Value) {
-            if ($h.Value -eq (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($AADAppAsHashTable.AppName + $h.Name)).SecretValueText) {
+
+        $FullAppName = Remove-EnvFromString -StringWithEnv $AADAppAsHashTable.AppName
+            if ($h.Value -eq (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($FullAppName + $h.Name)).SecretValueText) {
                 Write-Output "Key/Value pair exists"
             }
             else {
-                Write-Output ("Adding {0} secret to key vault" -f ($AADAppAsHashTable.AppName + $h.Name))
+                Write-Output ("Adding {0} secret to key vault" -f ($FullAppName + $h.Name))
                 $EncryptedSecret = ConvertTo-SecureString -String $h.value -AsPlainText -Force
-                Set-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($AADAppAsHashTable.AppName + $h.Name) -SecretValue $EncryptedSecret
+                Set-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($FullAppName + $h.Name) -SecretValue $EncryptedSecret
             }
-
-        }
     }
 }
 
@@ -161,9 +160,22 @@ function Set-VSTSVariables {
         $AADAppAsHashTable
     )
     foreach ($h in $AADAppAsHashTable.GetEnumerator()) {
-        Write-Output ("##vso[task.setvariable variable={0};]{1}" -f ($AADAppAsHashTable.AppName + $h.Name), $h.Value)
-        Write-Output ("Created variable for {0}" -f ($AADAppAsHashTable.AppName + $h.Name))
+        $FullAppName = Remove-EnvFromString -StringWithEnv $AADAppAsHashTable.AppName
+        Write-Output ("##vso[task.setvariable variable={0};]{1}" -f ($FullAppName + $h.Name), $h.Value)
+        Write-Output ("Created variable for {0}" -f ($FullAppName + $h.Name))
     }    
+}
+
+function Remove-EnvFromString {
+    param (
+            [String] 
+        [Parameter(Mandatory)]
+        $StringWithEnv
+    )
+        $EnvToBeRemoved = $StringWithEnv.Split("-")[-1]
+        $FullAppName = $StringWithEnv -replace "$EnvToBeRemoved",""
+        return $FullAppName
+    
 }
 
 

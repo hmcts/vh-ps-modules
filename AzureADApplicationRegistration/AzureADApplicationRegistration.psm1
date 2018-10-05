@@ -94,7 +94,6 @@ function Add-AzureADApp {
         $HashTable.Add("AppName", $AADAppNameForId)
         # Add App's ID to hast table
         $HashTable.Add("AppID", $AADApp.AppId)
-        
         # Create SP for AAD App
         $AADAppSP = New-AzureADServicePrincipal -AppId $AADApp.AppId
         # Add AD App's SP to hash table
@@ -122,8 +121,6 @@ function Add-AzureADAppKey {
 
     # Add AAD password
     $AADAppKey = New-AzureADApplicationPasswordCredential -ObjectId $AADApp.ObjectId -CustomKeyIdentifier $AADAppKeyIdentifier
-    #Get-AzureADApplicationPasswordCredential -ObjectId $AADApp.ObjectId
-
     $Key = $AADAppKey.Value.ToString()
     return $Key
 }
@@ -141,16 +138,15 @@ function Add-AzureADAppSecret {
     )
     $AADAppName = $AADAppName.ToLower() -replace '_', '-'
     foreach ($h in $AADAppAsHashTable.GetEnumerator()) {
-
         $FullAppName = Remove-EnvFromString -StringWithEnv $AADAppAsHashTable.AppName
-            if ($h.Value -eq (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($FullAppName + $h.Name)).SecretValueText) {
-                Write-Output "Key/Value pair exists"
-            }
-            else {
-                Write-Output ("Adding {0} secret to key vault" -f ($FullAppName + $h.Name))
-                $EncryptedSecret = ConvertTo-SecureString -String $h.value -AsPlainText -Force
-                Set-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($FullAppName + $h.Name) -SecretValue $EncryptedSecret
-            }
+        if ($h.Value -eq (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($FullAppName + $h.Name)).SecretValueText) {
+            Write-Output "Key/Value pair exists"
+        }
+        else {
+            Write-Output ("Adding {0} secret to key vault" -f ($FullAppName + $h.Name))
+            $EncryptedSecret = ConvertTo-SecureString -String $h.value -AsPlainText -Force
+            Set-AzureKeyVaultSecret -VaultName $AzureKeyVaultName -Name ($FullAppName + $h.Name) -SecretValue $EncryptedSecret
+        }
     }
 }
 
@@ -168,14 +164,14 @@ function Set-VSTSVariables {
 
 function Remove-EnvFromString {
     param (
-            [String] 
+        [String] 
         [Parameter(Mandatory)]
         $StringWithEnv
     )
-        $EnvToBeRemoved = $StringWithEnv.Split("-")[-1]
-        $FullAppName = $StringWithEnv -replace "$EnvToBeRemoved",""
-        return $FullAppName
-    
+    $EnvToBeRemoved = $StringWithEnv.Split("-")[-1]
+    $FullAppName = $StringWithEnv -replace "$EnvToBeRemoved", ""
+    return $FullAppName
+
 }
 
 

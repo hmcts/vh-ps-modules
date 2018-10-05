@@ -179,8 +179,8 @@ function Remove-EnvFromString {
 function Set-AzureADResourceAccess {
     [CmdletBinding()]
     param (
-        $AzureADAppNameServer = 'HearingsAPI',
-        $AzureADAppNameClinet = 'JB-test-api'
+        $AzureADAppNameServer,
+        $AzureADAppNameClinet
         
     )
     
@@ -202,8 +202,8 @@ function Set-AzureADResourceAccess {
         # check if app has required resource access
 
         if ($AzureADAppClient.RequiredResourceAccess.ResourceAppId -notcontains $AzureADAppThatNeedsToBeAccessed.AppId -and `
-                    $AzureADAppClient.RequiredResourceAccess.ResourceAccess.Id -notcontains $AzureADAppThatNeedsToBeAccessed.Oauth2Permissions.id
-            ) {
+                $AzureADAppClient.RequiredResourceAccess.ResourceAccess.Id -notcontains $AzureADAppThatNeedsToBeAccessed.Oauth2Permissions.id
+        ) {
             # new object for setting RequiredResourceAccess for client app
             $ReqAccessObject = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
 

@@ -184,12 +184,9 @@ function Set-AzureADResourceAccess {
         [String] 
         [Parameter(Mandatory)]
         $AzureADAppNameClinet
-        
     )
     
     begin {
-        $AzureADAppNameServer = 'HearingsAPI'
-        $AzureADAppNameClinet = 'JB-test-api'
         # Server app, app that needs to be accessed e.g. hearings API
         $AzureADAppThatNeedsToBeAccessed = (Get-AzureADApplication -SearchString $AzureADAppNameServer)[0]
         # Client app, app that will be accessing Server app e.g. book a hearing API

@@ -152,6 +152,7 @@ function Add-AzureADAppSecret {
 
 function Set-VSTSVariables {
     param (
+        [string]
         [Parameter(Mandatory)]
         $AADAppAsHashTable
     )
@@ -174,12 +175,14 @@ function Remove-EnvFromString {
 
 }
 
-
-
 function Set-AzureADResourceAccess {
     [CmdletBinding()]
     param (
+        [String] 
+        [Parameter(Mandatory)]
         $AzureADAppNameServer,
+        [String] 
+        [Parameter(Mandatory)]
         $AzureADAppNameClinet
         
     )
@@ -195,10 +198,6 @@ function Set-AzureADResourceAccess {
     
     process {
         # book-hearing-api -> hearings-api
-
-        #$AzureADAppNameServer = 'HearingsAPI'
-        #$AzureADAppNameClinet = 'JB-test-api'
-
         # check if app has required resource access
 
         if ($AzureADAppClient.RequiredResourceAccess.ResourceAppId -notcontains $AzureADAppThatNeedsToBeAccessed.AppId -and `
@@ -210,13 +209,9 @@ function Set-AzureADResourceAccess {
             # oauth2Permission ID, Used for configuring the client App's "requiredResourceAccess" permissions. This is the id of Oauth2Permissions from server app e.g. hearings API 
             $ResourceAccess = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList $AzureADAppThatNeedsToBeAccessed.Oauth2Permissions.id, "Scope"
 
-
-            #$AzureADAppThatNeedsToBeAccessed.AppId
-
             # add values to object
             $ReqAccessObject.ResourceAccess = $ResourceAccess
             $ReqAccessObject.ResourceAppId = $AzureADAppThatNeedsToBeAccessed.AppID
-
 
             $AZureADAppExistingRequiredResourceAccess = $AzureADAppClient.RequiredResourceAccess
             $AZureADAppExistingRequiredResourceAccess.add($ReqAccessObject)
@@ -231,7 +226,4 @@ function Set-AzureADResourceAccess {
     }
 }
 
-
-
-
-Export-ModuleMember -Function 'Invoke-AzureADApplicationRegistration'
+Export-ModuleMember -Function 'Invoke-AzureADApplicationRegistration', 'Invoke-AzureConnection', 'Set-AzureADResourceAccess'

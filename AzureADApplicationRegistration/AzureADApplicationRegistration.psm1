@@ -152,7 +152,6 @@ function Add-AzureADAppSecret {
 
 function Set-VSTSVariables {
     param (
-        [string]
         [Parameter(Mandatory)]
         $AADAppAsHashTable
     )

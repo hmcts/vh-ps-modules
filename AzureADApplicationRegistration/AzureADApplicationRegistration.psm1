@@ -229,7 +229,7 @@ function New-IdentifierUris {
         [Parameter(Mandatory)]
         $AADAppName,
         [String]
-        [ValidateScript({[system.uri]::IsWellFormedUriString($_,[System.UriKind]::Absolute)})]
+        [ValidateScript( {[system.uri]::IsWellFormedUriString($_, [System.UriKind]::Absolute)})]
         [Parameter(Mandatory)]
         $URI
     )
@@ -245,4 +245,100 @@ function New-IdentifierUris {
     }   
 }
 
-Export-ModuleMember -Function 'Invoke-AzureADApplicationRegistration', 'Invoke-AzureConnection', 'Set-AzureADResourceAccess', 'New-IdentifierUris'
+# Function to connect to Azure AD using certificate (private key) stored in VM's certificate store
+function Invoke-AzureADConnection {
+    [CmdletBinding()]
+    param (
+        [String] 
+        [Parameter(Mandatory)]
+        $AzureTenantId,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureAdAppId,
+        [string]
+        [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
+        $AzureAdAppCertificateThumbprint,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureSubscriptionId 
+    )
+    Connect-AzureAD -TenantId $AzureTenantId -ApplicationId $AzureAdAppId -CertificateThumbprint $AzureAdAppCertificateThumbprint -ErrorAction Stop
+}
+
+
+function Format-AppName {
+    [CmdletBinding()]
+    param (
+        [String]
+        [Parameter(Mandatory)]
+        $AADAppName
+    )
+    
+    begin {
+    }
+    
+    process {
+        $AADAppName = $AADAppName.ToLower() -replace '-', '_'
+    }
+    
+    end {
+        return $AADAppName
+    }
+}
+
+
+function Set-AzureADApplicationReplyUrls {
+    [CmdletBinding()]
+    param (
+        [String] 
+        [Parameter(Mandatory)]
+        $AzureTenantId,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureAdAppId,
+        [string]
+        [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
+        $AzureAdAppCertificateThumbprint,
+        [String]
+        [Parameter(Mandatory)]
+        $AADAppName,
+        [String]
+        [Parameter(Mandatory)]
+        $AADAppReplyUrls 
+    )
+
+    Connect-AzureAD -TenantId $AzureTenantId -ApplicationId $AzureAdAppId -CertificateThumbprint $AzureAdAppCertificateThumbprint -ErrorAction Stop
+    # Format app name
+    $AADAppName = Format-AppName -AADAppName $AADAppName
+    
+    # Cleanup reply urls and create array
+    [string]$AADAppReplyUrlsNoSpace = $AADAppReplyUrls -replace " ", ""
+    [array]$AADAppReplyUrls = $AADAppReplyUrlsNoSpace.Split(",")
+
+    # Get amd existing app
+    $ExistingAADApp = Get-AzureADApplication -SearchString $AADAppName
+
+    # Add existing Replay URLs to array
+    $ExistingReplyURLS = $ExistingAADApp.ReplyUrls
+
+    # Filter out existing URLs
+    foreach ($AADAppReplyUrl in $AADAppReplyUrls) {
+        if ($existingReplyURLS -contains $AADAppReplyUrl) {
+            Write-Host ("Replay URL {0} arleady ahs been set" -f $AADAppReplyUrl)
+        }
+        else {
+            Write-Host ("Adding new reply URL {0}" -f $AADAppReplyUrl)
+            $existingReplyURLS.add($AADAppReplyUrl)
+        } 
+    }
+
+    # Check if there are new urls to set 
+    if ($AADAppReplyUrls -le 1 ) {
+        Write-Host "No reply URLs provided..."
+    }
+    else {
+        Set-AzureADApplication -ObjectId $ExistingAADApp.ObjectId -ReplyUrls $ExistingReplyURLS 
+    }
+}
+
+Export-ModuleMember -Function 'Invoke-AzureADApplicationRegistration', 'Invoke-AzureConnection', 'Set-AzureADResourceAccess', 'New-IdentifierUris', 'Set-AzureADApplicationReplyUrls'

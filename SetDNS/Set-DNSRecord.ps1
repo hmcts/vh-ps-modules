@@ -1,11 +1,11 @@
 $WebSiteName = "vh-website"
-$AzureAppServiceWebSiteDomainName = ".azurewebsites.ne"
+$AzureAppServiceWebSiteDomainName = ".azurewebsites.net"
 $CNAME = $WebSiteName + $AzureAppServiceWebSiteDomainName
 $AzureResourceGroupName = "vh-hearings-reform-hmcts-net-dns-zone"
 $AzureDNSZoneName = "hearings.reform.hmcts.net"
 
 Write-Host ("Searching for {0} with a CNAME of {1} in DNS Zone {2}" -f $WebSiteName, $CNAME, $AzureDNSZoneName)
-$AzureDNSRecordResult = Get-AzureRmDnsRecordSet -Name $WebSiteName -ZoneName $AzureDNSZoneName  -ResourceGroupName $AzureResourceGroupName -RecordType CNAME -ErrorAction Continue
+$AzureDNSRecordResult = Get-AzureRmDnsRecordSet -Name $WebSiteName -ZoneName $AzureDNSZoneName  -ResourceGroupName $AzureResourceGroupName -RecordType CNAME -ErrorAction SilentlyContinue
 
 if ($null -eq $AzureDNSRecordResult) {
     Write-Host "Creating new CNAME record"

@@ -1,3 +1,29 @@
+<#
+.Synopsis
+   This function will register new AAD applications and Service Principals
+.DESCRIPTION
+   This function will register new AAD applications and Service Principals. This is required to setup service to service authentication and to grant access to Microsoft's API's.
+   Once the AAD application registration has been completed it will output the App Name, App ID, App Key, App ID URI as environment variables for consumption in VSTS.
+   Also, it will push the App Name, App ID, App Key, App ID URI to the specified Azure Key Vault.
+.EXAMPLE
+   Invoke-AzureADApplicationRegistration -AzureTenantId "xxx" -AzureAdAppId "xxx" -AzureAdAppCertificateThumbprint "xxx" -AzureSubscriptionId "xxx" -AzureKeyVaultName "xxx" -AzureADApplicationName "xxx"
+.EXAMPLE
+   Invoke-AzureADApplicationRegistration -AzureTenantId "xxx" -AzureAdAppId "xxx" -AzureAdAppCertificateThumbprint "xxx" -AzureSubscriptionId "xxx" -AzureKeyVaultName "xxx" -AzureADApplicationName "xxx" -AzureTenantIdSecondary "xxx" -AzureAdAppIdSecondary "xxx" -AzureAdAppCertificateThumbprintSecondary "xxx"
+.INPUTS
+   Inputs to this cmdlet (if any)
+.OUTPUTS
+   Output from this cmdlet (if any)
+.NOTES
+   General notes
+.COMPONENT
+   The component this cmdlet belongs to
+.ROLE
+   The role this cmdlet belongs to
+.FUNCTIONALITY
+   The functionality that best describes this cmdlet
+#>
+
+
 #Requires -Version 5.0
 #Requires -Module AzureAD
 #Requires -Module AzureRM.KeyVault

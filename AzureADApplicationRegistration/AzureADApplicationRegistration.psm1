@@ -72,5 +72,3 @@ function Invoke-AzureConnection {
     Connect-AzureAD -TenantId $AzureTenantId -ApplicationId $AzureAdAppId -CertificateThumbprint $AzureAdAppCertificateThumbprint -ErrorAction Stop
     Connect-AzureRmAccount -ServicePrincipal -TenantId $AzureTenantId -ApplicationId $AzureAdAppId  -CertificateThumbprint $AzureAdAppCertificateThumbprint -Subscription $AzureSubscriptionId -ErrorAction Stop
 }
-
-#Export-ModuleMember -Function 'Invoke-AzureADApplicationRegistration', 'Invoke-AzureConnection', 'Set-AzureADResourceAccess', 'New-IdentifierUris', 'Set-AzureADApplicationReplyUrls'

@@ -7,5 +7,4 @@ function Remove-EnvFromString {
     $EnvToBeRemoved = $StringWithEnv.Split("-")[-1]
     $FullAppName = $StringWithEnv -replace "$EnvToBeRemoved", ""
     return $FullAppName
-
 }

@@ -1,19 +1,20 @@
-# Function to connect to Azure AD using certificate (private key) stored in VM's certificate store
-function Invoke-AzureADConnection {
+
+function Invoke-AzureConnection {
     [CmdletBinding()]
     param (
-        [String]
-        [Alias("AzureTenantIdSecondary")]
+        [String] 
         [Parameter(Mandatory)]
         $AzureTenantId,
         [String]
-        [Alias("AzureAdAppIdSecondary")]
         [Parameter(Mandatory)]
         $AzureAdAppId,
         [string]
-        [Alias("AzureAdAppCertificateThumbprintSecondary")]
         [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
-        $AzureAdAppCertificateThumbprint
+        $AzureAdAppCertificateThumbprint,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureSubscriptionId 
     )
     Connect-AzureAD -TenantId $AzureTenantId -ApplicationId $AzureAdAppId -CertificateThumbprint $AzureAdAppCertificateThumbprint -ErrorAction Stop
+    Connect-AzureRmAccount -ServicePrincipal -TenantId $AzureTenantId -ApplicationId $AzureAdAppId  -CertificateThumbprint $AzureAdAppCertificateThumbprint -Subscription $AzureSubscriptionId -ErrorAction Stop
 }

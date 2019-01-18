@@ -3,15 +3,12 @@ function Invoke-AzureRMConnection {
     [CmdletBinding()]
     param (
         [String]
-        [Alias("AzureTenantIdSecondary")]
         [Parameter(Mandatory)]
         $AzureTenantId,
         [String]
-        [Alias("AzureAdAppIdSecondary")]
         [Parameter(Mandatory)]
         $AzureAdAppId,
         [string]
-        [Alias("AzureAdAppCertificateThumbprintSecondary")]
         [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
         $AzureAdAppCertificateThumbprint,
         [String]

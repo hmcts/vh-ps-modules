@@ -23,7 +23,6 @@
    The functionality that best describes this cmdlet
 #>
 
-
 #Requires -Version 5.0
 #Requires -Module AzureAD
 #Requires -Module AzureRM.KeyVault

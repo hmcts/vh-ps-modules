@@ -1,4 +1,4 @@
-
+<#
 . .\secrets.ps1
 
 Param(
@@ -7,7 +7,7 @@ Param(
    [string]$user = "PAT",
    [string]$token = ""
 )
-
+#>
 Write-Verbose "Parameter Values"
 foreach($key in $PSBoundParameters.Keys)
 {

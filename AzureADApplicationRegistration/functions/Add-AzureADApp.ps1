@@ -4,7 +4,12 @@ function Add-AzureADApp {
     param (
         [String]
         [Parameter(Mandatory)]
-        $AADAppName
+        $AADAppName,
+        [String]
+        $identifierUrisPrefix,
+        [String]
+        [Parameter(Mandatory)]
+        $AzureKeyVaultName
 
     )
     # Add ID and Replay urls
@@ -15,8 +20,12 @@ function Add-AzureADApp {
     # Create empty hash table
     $HashTable = @{}
 
-    # Register Azure AD App
-    if ($AADAppName -eq (Get-AzureADApplication -SearchString $AADAppName).DisplayName -and (Get-AzureADApplication -SearchString $AADAppName).IdentifierUris -contains $AADAppIdentifierUris) {
+    ## Register Azure AD App
+    # Check if the app already exists by comparing name and app ID URI stored in Azure Key vault.
+    if ($AADAppName -eq (Get-AzureADApplication -SearchString $AADAppName).DisplayName `
+     -and (Get-AzureADApplication -SearchString $AADAppName).IdentifierUris `
+     -contains (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName `
+     -Name ((Remove-EnvFromString -StringWithEnv $AADAppNameForId) + "IdentifierUris") -ErrorAction Stop).SecretValueText) {
         Write-Verbose "Application $AADAppName found"
         # Get App and App's SP
         $AADApp = Get-AzureADApplication -SearchString $AADAppName

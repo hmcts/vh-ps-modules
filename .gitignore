@@ -10,7 +10,7 @@
 *.sln.docstates
 Vars.ps1
 copyazurekeyvaultsecrets.ps1
-
+secrets.ps1
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

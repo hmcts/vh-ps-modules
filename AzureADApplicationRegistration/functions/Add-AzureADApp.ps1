@@ -13,10 +13,11 @@ function Add-AzureADApp {
 
     )
     # Add ID and Replay urls
-    $AADAppName = $AADAppName.ToLower() -replace '-', '_'
-    $AADAppNameForId = $AADAppName.ToLower() -replace '_', '-'
+    $AADAppNameOriginal = $AADAppName.ToLower()
+    $AADAppName = $AADAppNameOriginal -replace '-', '_'
+    $AADAppNameForId = $AADAppNameOriginal
     $AADAppIdentifierUris = "https://" + $identifierUrisPrefix + (([Guid]::NewGuid()).guid)
-    $AADAppReplyUrls = $AADAppIdentifierUris
+    $AADAppReplyUrls = "https://" + $AADAppNameOriginal
     # Create empty hash table
     $HashTable = @{}
 

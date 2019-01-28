@@ -15,7 +15,7 @@ function Add-AzureADApp {
     # Add ID and Replay urls
     $AADAppNameOriginal = $AADAppName.ToLower()
     $AADAppName = $AADAppNameOriginal -replace '-', '_'
-    $AADAppNameForId = $AADAppNameOriginal
+    $AADAppNameForId = $AADAppName.ToLower() -replace '_', '-'
     $AADAppIdentifierUris = "https://" + $identifierUrisPrefix + (([Guid]::NewGuid()).guid)
     $AADAppReplyUrls = "https://" + $AADAppNameOriginal
     # Create empty hash table
@@ -25,8 +25,8 @@ function Add-AzureADApp {
     # Check if the app already exists by comparing name and app ID URI stored in Azure Key vault.
     if ($AADAppName -eq (Get-AzureADApplication -SearchString $AADAppName).DisplayName `
             -and (Get-AzureADApplication -SearchString $AADAppName).IdentifierUris `
-            -contains (Get-AzureKeyVaultSecret -VaultName $AzureKeyVaultName `
-                -Name ((Remove-EnvFromString -StringWithEnv $AADAppNameForId) + "IdentifierUris") -ErrorAction Stop).SecretValueText) {
+            -contains (Get-AzureKeyVaultSecret -ErrorAction Stop -VaultName $AzureKeyVaultName `
+                -Name ((Remove-EnvFromString -StringWithEnv $AADAppNameForId) + "IdentifierUris") ).SecretValueText) {
         Write-Verbose "Application $AADAppName found"
         # Get App and App's SP
         $AADApp = Get-AzureADApplication -SearchString $AADAppName

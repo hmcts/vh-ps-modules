@@ -35,38 +35,38 @@ function Add-AzureADApp {
             # Get service principal
             $AADAppSP = Get-AzureADServicePrincipal -SearchString $AADAppName
             # Add AD App's SP to hash table
-            $HashTable.Add("AppSPObjectID", $AADAppSP.ObjectId)
+            $HashTable.Add("appspobjectid", $AADAppSP.ObjectId)
         }
         
         # Add details to hash table
-        $HashTable.Add("AppName", $AADAppNameForId)
+        $HashTable.Add("appname", $AADAppNameForId)
         # Add App's ID to hash table
-        $HashTable.Add("AppID", $AADApp.AppId)
+        $HashTable.Add("appid", $AADApp.AppId)
         # Add App's IdentifierUris to hash table
-        $HashTable.Add("IdentifierUris", $AADApp.IdentifierUris[0])
+        $HashTable.Add("identifieruris", $AADApp.IdentifierUris[0])
 
     }
     else {
         # Create AAD App
         $AADApp = New-AzureADApplication -DisplayName $AADAppName -IdentifierUris $AADAppIdentifierUris -ReplyUrls $AADAppReplyUrls
         # Add App name to hash table
-        $HashTable.Add("AppName", $AADAppNameForId)
+        $HashTable.Add("appname", $AADAppNameForId)
         # Add App's ID to hast table
-        $HashTable.Add("AppID", $AADApp.AppId)
+        $HashTable.Add("appid", $AADApp.AppId)
         # Add App's IdentifierUris to hash table
-        $HashTable.Add("IdentifierUris", $AADApp.IdentifierUris[0])
+        $HashTable.Add("identifieruris", $AADApp.IdentifierUris[0])
 
         if (0 -eq $AzureTenantIdSecondary -and 0 -eq $AzureAdAppIdSecondary -and 0 -eq $AzureAdAppCertificateThumbprintSecondary) {
             # Create SP for AAD App
             $AADAppSP = New-AzureADServicePrincipal -AppId $AADApp.AppId
             # Add AD App's SP to hash table
-            $HashTable.Add("AppSPObjectID", $AADAppSP.ObjectId)
+            $HashTable.Add("appspobjectid", $AADAppSP.ObjectId)
 
         }
 
         # Create key for AAD App
         $AADAppKey = Add-AzureADAppKey -AADAppName $AADAppNameForId
-        $HashTable.Add("Key", $AADAppKey)
+        $HashTable.Add("key", $AADAppKey)
     }
     return $HashTable
 }

@@ -3,22 +3,26 @@ function Set-AzureADApplicationReplyUrls {
     param (
         [String] 
         [Parameter(Mandatory)]
+        [Alias("AzureTenantIdSecondary")]
         $AzureTenantId,
         [String]
         [Parameter(Mandatory)]
+        [Alias("AzureAdAppIdSecondary")]
         $AzureAdAppId,
         [string]
-        [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
+        [Parameter(Mandatory)]
+        [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})]
+        [Alias("AzureAdAppCertificateThumbprintSecondary")]
         $AzureAdAppCertificateThumbprint,
         [String]
         [Parameter(Mandatory)]
         $AADAppName,
         [String]
         [Parameter(Mandatory)]
-        $AADAppReplyUrls 
+        $AADAppReplyUrls
     )
 
-    Connect-AzureAD -TenantId $AzureTenantId -ApplicationId $AzureAdAppId -CertificateThumbprint $AzureAdAppCertificateThumbprint -ErrorAction Stop
+    Invoke-AzureADConnection -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint
     # Format app name
     $AADAppName = Format-AppName -AADAppName $AADAppName
     
@@ -27,7 +31,12 @@ function Set-AzureADApplicationReplyUrls {
     [array]$AADAppReplyUrls = $AADAppReplyUrlsNoSpace.Split(",")
 
     # Get amd existing app
-    $ExistingAADApp = Get-AzureADApplication -SearchString $AADAppName
+    $ExistingAADApp = Get-AzureADApplication -SearchString $AADAppName | where DisplayName -EQ $AADAppName
+
+
+    if ($null -eq $ExistingAADApp) {
+        Write-Error ("Unable to find app {0}. Check if you are connected to the correct AAD tenant." -f $AADAppName) -ErrorAction Stop
+    }
 
     # Add existing Replay URLs to array
     $ExistingReplyURLS = $ExistingAADApp.ReplyUrls
@@ -35,7 +44,7 @@ function Set-AzureADApplicationReplyUrls {
     # Filter out existing URLs
     foreach ($AADAppReplyUrl in $AADAppReplyUrls) {
         if ($existingReplyURLS -contains $AADAppReplyUrl) {
-            Write-Host ("Replay URL {0} arleady ahs been set" -f $AADAppReplyUrl)
+            Write-Host ("Replay URL {0} already has been set" -f $AADAppReplyUrl)
         }
         else {
             Write-Host ("Adding new reply URL {0}" -f $AADAppReplyUrl)

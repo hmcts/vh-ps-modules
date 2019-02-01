@@ -68,7 +68,7 @@ function Invoke-AzureADApplicationRegistration {
         Invoke-AzureRMConnection -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint -AzureSubscriptionId $AzureSubscriptionId
         $AADRegApp = Add-AzureADApp -AADAppName  $AzureADApplicationName -identifierUrisPrefix $identifierUrisPrefix -AzureKeyVaultName $AzureKeyVaultName
         Set-VSTSVariables -AADAppAsHashTable $AADRegApp
-        if ($AADRegApp.Key) {
+        if ($AADRegApp.key) {
             Add-AzureADAppSecret -AzureKeyVaultName $AzureKeyVaultName -AADAppAsHashTable $AADRegApp -AADAppName $AzureADApplicationName
         }
       
@@ -78,7 +78,7 @@ function Invoke-AzureADApplicationRegistration {
         Invoke-AzureConnection -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint -AzureSubscriptionId $AzureSubscriptionId
         $AADRegApp = Add-AzureADApp -AADAppName  $AzureADApplicationName -identifierUrisPrefix $identifierUrisPrefix -AzureKeyVaultName $AzureKeyVaultName
         Set-VSTSVariables -AADAppAsHashTable $AADRegApp
-        if ($AADRegApp.Key) {
+        if ($AADRegApp.key) {
             Add-AzureADAppSecret -AzureKeyVaultName $AzureKeyVaultName -AADAppAsHashTable $AADRegApp -AADAppName $AzureADApplicationName
         }
       

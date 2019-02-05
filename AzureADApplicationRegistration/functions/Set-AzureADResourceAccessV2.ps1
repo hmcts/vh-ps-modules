@@ -2,7 +2,11 @@
 function Set-AzureADResourceAccessV2 {
     [CmdletBinding()]
     param (
+        [String] 
+        [Parameter(Mandatory)]
         $resourceAccessDefinition = "D:\SourceCode\vh-book-hearing-client-provisioning\access.json" ,
+        [String] 
+        [Parameter(Mandatory)]
         $azureAdAppName = "vh_app_jb_preview"
     )
     

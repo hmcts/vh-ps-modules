@@ -4,10 +4,10 @@ function Set-AzureADResourceAccessV2 {
     param (
         [String] 
         [Parameter(Mandatory)]
-        $resourceAccessDefinition = "D:\SourceCode\vh-book-hearing-client-provisioning\access.json" ,
+        $resourceAccessDefinition,
         [String] 
         [Parameter(Mandatory)]
-        $azureAdAppName = "vh_app_jb_preview"
+        $azureAdAppName
     )
     
     begin {
@@ -91,5 +91,3 @@ function Set-AzureADResourceAccessV2 {
         Set-AzureADApplication -ObjectId $azureADAppClient.ObjectId -RequiredResourceAccess $azureADAppExistingRequiredResourceAccess
     }
 }
-
-Set-AzureADResourceAccessV2

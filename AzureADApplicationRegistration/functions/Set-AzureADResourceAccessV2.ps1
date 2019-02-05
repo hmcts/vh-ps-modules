@@ -1,5 +1,4 @@
 
-
 function Set-AzureADResourceAccessV2 {
     [CmdletBinding()]
     param (

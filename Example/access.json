@@ -1,0 +1,50 @@
+{
+    "requiredResourceAccess": [
+        {
+            "resourceAppName": "Microsoft.Azure.ActiveDirectory",
+            "resourceAppId": "00000002-0000-0000-c000-000000000000",
+            "resourceAccess": [
+                {
+                    "resourceAccessName": "some permission name",
+                    "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6",
+                    "type": "Scope"
+                },
+                {
+                    "resourceAccessName": "some permission name",
+                    "id": "78c8a3c8-a07e-4b9e-af1b-b5ccab50a175",
+                    "type": "Role"
+                },
+                {
+                  "id": "5778995a-e1bf-45b8-affa-663a9f3f4d04",
+                  "type": "Role"
+                }
+            ]
+        },
+        {
+            "resourceAppName": "Microsoft.Graph",
+            "resourceAppId": "00000003-0000-0000-c000-000000000000",
+            "resourceAccess": [
+                {
+                    "resourceAccessName": "some permission name",
+                    "id": "5b567255-7703-4780-807c-7be8301ae99b",
+                    "type": "Role"
+                },
+                {
+                    "resourceAccessName": "some permission name",
+                    "id": "5f8c59db-677d-491f-a6b8-5f174b11ec1d",
+                    "type": "Scope"
+                },
+                {
+                    "resourceAccessName": "some permission name",
+                    "id": "741f803b-c850-494e-b5df-cde7c675a1ca",
+                    "type": "Role"
+                },
+                {
+                    "resourceAccessName": "some permission name",
+                    "id": "62a82d76-70ea-41e2-9197-370581804d09",
+                    "type": "Role"
+                }
+            ]
+        }
+    ]
+}

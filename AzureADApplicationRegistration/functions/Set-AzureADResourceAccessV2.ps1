@@ -7,6 +7,7 @@ function Set-AzureADResourceAccessV2 {
         $resourceAccessDefinition,
         [String] 
         [Parameter(Mandatory)]
+        [Alias("AzureADApplicationName")]
         $azureAdAppName
     )
     

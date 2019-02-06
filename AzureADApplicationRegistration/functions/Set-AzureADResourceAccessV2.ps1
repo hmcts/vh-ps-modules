@@ -15,6 +15,9 @@ function Set-AzureADResourceAccessV2 {
         # Get the permissions list form json
         $apiAccessJSON = Get-Content $resourceAccessDefinition  | ConvertFrom-Json
 
+        # Change the app name with '_'
+        $azureAdAppName = Format-AppName -AADAppName $azureAdAppName
+
         # Search for an existing AAD app
         $azureADAppClient = Get-AzureADApplication -SearchString $azureAdAppName | Where-Object DisplayName -EQ $azureAdAppName
 

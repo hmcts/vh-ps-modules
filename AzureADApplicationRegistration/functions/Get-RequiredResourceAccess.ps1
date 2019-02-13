@@ -1,3 +1,5 @@
+# Example usage
+#  Get-RequiredResourceAccess -AppName vh_book_hearing_client_preview | ConvertTo-Json -Depth 4
 function Get-RequiredResourceAccess {
     [CmdletBinding()]
     param (

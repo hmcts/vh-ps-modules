@@ -17,7 +17,7 @@ function Get-RequiredResourceAccess {
         $ResourceObj = Get-AzureADServicePrincipal -All $true | Where-Object AppId -eq $Resource.ResourceAppId | Select-Object -first 1 -Property AppDisplayName, Oauth2Permissions
         $ResultResourceObject = New-Object PSObject
         $ResultResourceObject | Add-Member -NotePropertyName ResourceAppName -NotePropertyValue $ResourceObj.AppDisplayName
-        $ResultResourceObject | Add-Member -NotePropertyName ResourceAppId -NotePropertyValue $ResourceObj.ResourceAppId
+        $ResultResourceObject | Add-Member -NotePropertyName ResourceAppId -NotePropertyValue $Resource.ResourceAppId
 
         $ResultResourceAccesses = @()
         foreach ($RequiredResource in $Resource.ResourceAccess) {

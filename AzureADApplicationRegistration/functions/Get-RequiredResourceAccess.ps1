@@ -10,6 +10,10 @@ function Get-RequiredResourceAccess {
 
     # Get the app registration by name
     $Application = Get-AzureADApplication -SearchString $AppName
+    if ($Application.Count -gt 1) {
+        Throw ("'{0}' matches more than one application" -f $AppName)
+    }
+
     $ResourceAccess = $Application.RequiredResourceAccess
 
     # Create a new list for the output since the output has different properties than the source objects

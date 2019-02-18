@@ -14,7 +14,7 @@ function Set-AzureADResourceAccessV2 {
     begin {
 
         # Get the permissions list form json
-        $apiAccessJSON = Get-Content $resourceAccessDefinition  | ConvertFrom-Json
+        $jsonFile = Get-Content $resourceAccessDefinition  | ConvertFrom-Json
 
         # Change the app name with '_'
         $azureAdAppName = Format-AppName -AADAppName $azureAdAppName
@@ -27,43 +27,55 @@ function Set-AzureADResourceAccessV2 {
             
         }
 
-        # new object for setting RequiredResourceAccess for client app
-        $requiredResourceAccessObject = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
-
         # Create new variable with existing permissions
-        $azureADAppExistingRequiredResourceAccess = $azureADAppClient.RequiredResourceAccess
+        $currentRequiredResourceAccess = $azureADAppClient.RequiredResourceAccess
 
+        # Input
+        $requestedRequiredResourceAccess = $jsonFile.RequiredResourceAccess
     }
     
     process {
-        foreach ($resource in $apiAccessJSON.requiredResourceAccess) {
+        foreach ($resource in $requestedRequiredResourceAccess) {
             Write-Output   ("Checking if Required Resource Name '{0}' with Required Resource Id: '{1}' has been set..." -f $resource.resourceAppName, $resource.resourceAppId)
 
+            # new object for setting RequiredResourceAccess for client app
+            $requiredResourceAccessObject = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
+
+            # if the currently registered required resources doesn't contain this one
             if ($azureADAppClient.RequiredResourceAccess.ResourceAppId -notcontains $resource.resourceAppId) {
 
                 foreach ($resourceAccess in $resource.resourceAccess) {
                     Write-Output ("Checking if Required Resource Access ID '{0}' with Required Resource Access Type: '{1}' has been set..." -f $resourceAccess.id, $resourceAccess.type)
                     if ($azureADAppClient.RequiredResourceAccess.ResourceAccess.id -notcontains $resourceAccess.id) {
-                        Write-Output ("Required Resource Access ID '{0}' with Required Resource Access Type: '{1}' has not been set." -f $resourceAccess.id, $resourceAccess.type)
-                        Write-Output ("Setting up now...")
+                        Write-Output ("Required Resource Access '{0}' ID '{1}' with Required Resource Access Type: '{2}' has not been set, adding it.." -f $resourceAccess.resourceAccessName, $resourceAccess.id, $resourceAccess.type)
 
                         # oauth2Permission ID, Used for configuring the client App's "requiredResourceAccess" permissions.
-                        $ResourceAccess = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList $resourceAccess.id, $resourceAccess.type
+                        $addResourceAccess = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList $resourceAccess.id, $resourceAccess.type
         
                         # add values to object
-                        $requiredResourceAccessObject.ResourceAccess += $ResourceAccess                        
+                        $requiredResourceAccessObject.ResourceAccess += $addResourceAccess
+                    } else {
+                        Write-Output ("Required Resource Access ID '{0}' already defined, skipping.." -f $resourceAccess.id)
                     }
                 }
-                # Add Required Resource App ID thats is missing to the object.
-                $requiredResourceAccessObject.ResourceAppId = $resource.resourceAppId
-                $azureADAppExistingRequiredResourceAccess.add($requiredResourceAccessObject)
+                
+                # if any missing permissions need to be added
+                if ($requiredResourceAccessObject.ResourceAccess.Count -gt 0) {
+                    $requiredResourceAccessObject.ResourceAppId = $resource.resourceAppId
+                    $currentRequiredResourceAccess.add($requiredResourceAccessObject)
+                    Write-Output ("New Resource with Id '{0}' to be added" -f $requiredResourceAccessObject.ResourceAppId)
+                } else {
+                    Write-Output ("New resource '{0}' was declared among required resources but did specify any resource accesses" -f $resource.resourceAppName)
+                }
             }
             else {
-                Write-Output   ("Required Resource '{0}' with Required Resource Id: '{1}' has been set." -f $resource.resourceAppName, $resource.resourceAppId)
+                Write-Output   ("Required Resource '{0}' with Required Resource Id: '{1}' is already added to app registration, detecting required resource accesses.." -f $resource.resourceAppName, $resource.resourceAppId)
 
-                foreach ($existingRequiredResource in $azureADAppExistingRequiredResourceAccess) {
+                # for each of the existing required resources
+                foreach ($existingRequiredResource in $currentRequiredResourceAccess) {
+                    # find the one resource that's matching the one we're trying to add
                     if ($existingRequiredResource.ResourceAppId -eq $resource.resourceAppId) {
-
+                        # iterate through each required resource 
                         foreach ($resourceAccess in $resource.resourceAccess) {
                             Write-Output ("Checking if Required Resource Access ID '{0}' with Required Resource Access Type: '{1}' has been set..." -f $resourceAccess.id, $resourceAccess.type)
                             
@@ -80,11 +92,10 @@ function Set-AzureADResourceAccessV2 {
                         }
                         # Add the new Resource Access to the Existing resource access object
                         if ($null -EQ $requiredResourceAccessObject.ResourceAccess) {
-                            Write-Output "No new Resource Access permissions found to be set."
-                            
+                            Write-Output ("No new Resource Access permissions found to be set for '{0}'." -f $resource.resourceAppName)
                         }
                         else {
-                            $existingRequiredResource.ResourceAccess += $requiredResourceAccessObject.ResourceAccess
+                            $currentRequiredResourceAccess.add($requiredResourceAccessObject.ResourceAccess)                            
                         }
                     }
                 }
@@ -92,6 +103,6 @@ function Set-AzureADResourceAccessV2 {
         }
     }    
     end {
-        Set-AzureADApplication -ObjectId $azureADAppClient.ObjectId -RequiredResourceAccess $azureADAppExistingRequiredResourceAccess
+        Set-AzureADApplication -ObjectId $azureADAppClient.ObjectId -RequiredResourceAccess $currentRequiredResourceAccess
     }
 }

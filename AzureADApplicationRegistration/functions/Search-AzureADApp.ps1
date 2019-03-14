@@ -1,4 +1,3 @@
-
 function Search-AzureADApp {
     [CmdletBinding()]
     param (
@@ -36,5 +35,6 @@ function Search-AzureADApp {
     }    
     end {
         return  $azureADAppClient
+        Disconnect-AzureAD
     }
 }

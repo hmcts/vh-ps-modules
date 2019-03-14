@@ -1,16 +1,15 @@
-
 function Set-AzureADApplicationGroupMemebershipClaims {
     [CmdletBinding()]
     param (
         [String] 
         [Parameter(Mandatory)]
         [Alias("AzureADApplicationName")]
-        $azureAdAppName,
+        $AzureAdAppName,
 
         [String] 
         [Parameter(Mandatory)]
         [ValidateSet('SecurityGroup','All')]
-        $groupMembershipClaims
+        $GroupMembershipClaims
     )
     
     begin {
@@ -27,7 +26,6 @@ function Set-AzureADApplicationGroupMemebershipClaims {
     }    
     end {
         Write-Output ("Group membership claims for {0} set to {1}" -f $azureADAppClient.DisplayName,$groupMembershipClaims)
+        Disconnect-AzureAD
     }
 }
-
-Set-AzureADApplicationGroupMemebershipClaims -azureAdAppName vh_app_jb_preview -groupMembershipClaims All

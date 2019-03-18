@@ -15,5 +15,5 @@ function Invoke-AzureADConnection {
         [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
         $AzureAdAppCertificateThumbprint
     )
-    Connect-AzureAD -TenantId $AzureTenantId -ApplicationId $AzureAdAppId -CertificateThumbprint $AzureAdAppCertificateThumbprint -ErrorAction Stop
+    Connect-AzureAD -TenantId $AzureTenantId -ApplicationId $AzureAdAppId -CertificateThumbprint $AzureAdAppCertificateThumbprint -ErrorAction Stop | Out-Null
 }

@@ -1,8 +1,7 @@
 Function Get-AADToken {
-       
     [CmdletBinding()]
     [OutputType([string])]
-    PARAM (
+    param (
       [Parameter(Position=0,Mandatory=$true)]
       [ValidateScript({
             try 
@@ -15,58 +14,45 @@ Function Get-AADToken {
               $false
             }
       })]
-      [Alias('tID')]
-      [String]$TenantID,
-  
-      [Parameter(Position=1,Mandatory=$true)][Alias('cred')]
-      [pscredential]
-      [System.Management.Automation.CredentialAttribute()]
-      $Credential,
-      
-      [Parameter(Position=0,Mandatory=$false)][Alias('type')]
-      [ValidateSet('UserPrincipal', 'ServicePrincipal')]
-      [String]$AuthenticationType = 'UserPrincipal'
+      [String]
+      [Alias("AzureTenantIdSecondary")]
+      $AzureTenantId,
+      [String]
+      [Alias("AzureAdAppIdSecondary")]
+      [Parameter(Mandatory)]
+      $AzureAdAppId,
+      [string]
+      [Alias("AzureAdAppCertificateThumbprintSecondary")]
+      [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
+      $AzureAdAppCertificateThumbprint
     )
-    Try
-    {
-      $Username       = $Credential.Username
-      $Password       = $Credential.Password
-  
-      If ($AuthenticationType -ieq 'UserPrincipal')
-      {
-        # Set well-known client ID for Azure PowerShell
-        $clientId = '1950a258-227b-4e31-a9cf-717495945fc2'
-  
-        # Set Resource URI to Azure Service Management API
-        $resourceAppIdURI = 'https://management.azure.com/'
-  
-        # Set Authority to Azure AD Tenant
-        $authority = 'https://login.microsoftonline.com/common/' + $TenantID
-        Write-Verbose "Authority: $authority"
-  
-        $AADcredential = [Microsoft.IdentityModel.Clients.ActiveDirectory.UserCredential]::new($UserName, $Password)
-        $authContext = [Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext]::new($authority)
-        $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$AADcredential)
-        $Token = $authResult.Result.CreateAuthorizationHeader()
-      } else {
-        # Set Resource URI to Azure Service Management API
-        $resourceAppIdURI = 'https://management.core.windows.net/'
-  
-        # Set Authority to Azure AD Tenant
-        $authority = 'https://login.windows.net/' + $TenantId
-  
-        $ClientCred = [Microsoft.IdentityModel.Clients.ActiveDirectory.ClientCredential]::new($UserName, $Password)
+    begin {
+      # Get the certificate form local certificate store that will e used to authenticate with Service Principal
+      If ($AzureAdAppCertificateThumbprint) {
+        $sPCertificate = (Get-ChildItem -Path "cert:\LocalMachine\My\$($AzureAdAppCertificateThumbprint)")
+        }
+      # Set Authority to Azure AD Tenant
+      $authority = 'https://login.windows.net/' + $TenantId
+      # Resource App ID of the app that the bearer token is issued for
+      $resourceAppIdURI = 'https://graph.microsoft.com/'
+      # Import identity assembly
+      Add-Type -Path ($env:ProgramFiles + "\WindowsPowerShell\Modules\AzureAD\*\Microsoft.IdentityModel.Clients.ActiveDirectory.dll")
+
+    }
+    process {
+      Try {
+        $ClientCred = [Microsoft.IdentityModel.Clients.ActiveDirectory.ClientAssertionCertificate]::new($clientId, $sPCertificate)
         $authContext = [Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext]::new($authority)
         $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$ClientCred)
         $Token = $authResult.Result.CreateAuthorizationHeader()
       }
-      
+      Catch {
+        Throw $_
+        $ErrorMessage = 'Failed to aquire Azure AD token.'
+        Write-Error -Message 'Failed to aquire Azure AD token'
+      }
     }
-    Catch
-    {
-      Throw $_
-      $ErrorMessage = 'Failed to aquire Azure AD token.'
-      Write-Error -Message 'Failed to aquire Azure AD token'
+    end {
+      return $Token
     }
-    $Token
   }

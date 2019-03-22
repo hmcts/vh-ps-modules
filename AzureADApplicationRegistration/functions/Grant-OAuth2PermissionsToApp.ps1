@@ -33,7 +33,7 @@ Function Grant-OAuth2PermissionsToApp {
         Write-Error ("Unable to find app {0}. Check if you are connected to the correct AAD tenant." -f $azureADAppClient) -ErrorAction Stop
     }
 
-    $azureAppId = $azureADAppClient.AppId
+    # Find Azure AD App's Service Principal
     $azureADAppSP = Get-AzureADServicePrincipal -SearchString  $azureADAppClient.DisplayName | Where DisplayName -eq $azureADAppClient.DisplayName | where AppId -eq $azureADAppClient.AppId 
 
     # Check if a SP exists for the Azure AD app and create one if it doesn't
@@ -45,15 +45,15 @@ Function Grant-OAuth2PermissionsToApp {
       $azureADAppSP = New-AzureADServicePrincipal -AppId $azureADAppClient.AppId
     }
 
+    # Get bearer token 
     $token = $null
-    
     $token = Get-AADToken -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint
 
     foreach ($requiredResourceAccess in $azureADAppClient.RequiredResourceAccess) {
       # Clean scope variable
       $scope = $null
 
-      # Builds header
+      # Builds header that will be used in all API requests
       $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
       $headers.Add("Authorization", $token)
       $headers.Add("Content-Type", "application/json")
@@ -79,6 +79,16 @@ Function Grant-OAuth2PermissionsToApp {
         }
 
       }
+
+      # Get existing OAuth2 Permission Grants
+
+      $url = ("https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6&`$filter=clientId+eq+'{0}'" -f $azureADAppSP.ObjectId)
+      $existingOAuth2PermissionGrants = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -Headers $headers
+
+      # Compare existing scope to required scope patch if scope need updating
+      
+      ### code goes here
+
       $createOAuth2PermissionGrantsBody = @{
         "clientId"="YOUR APPLICATIONS’S SERVICE PRINCIPAL OBJECT ID";
         "consentType"="AllPrincipals";

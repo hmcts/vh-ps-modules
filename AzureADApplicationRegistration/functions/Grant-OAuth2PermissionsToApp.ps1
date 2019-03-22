@@ -4,40 +4,126 @@ Function Grant-OAuth2PermissionsToApp {
         [Parameter(Mandatory)]
         [Alias("AppName")]
         $azureAdAppName,
-
+        [Parameter(Position=0,Mandatory=$true)]
+        [ValidateScript({
+              try 
+              {
+                [System.Guid]::Parse($_) | Out-Null
+                $true
+              } 
+              catch 
+              {
+                $false
+              }
+        })]
+        [String]
+        [Alias("AzureTenantIdSecondary")]
+        $AzureTenantId,
         [string]
         [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
         $AzureAdAppCertificateThumbprint,
-
         [Parameter(Mandatory)]
         $AzureAdAppId
     )
 
     # Search for an existing AAD app
-    $azureADAppClient = Get-AzureADApplication -SearchString $azureAdAppName | Where-Object DisplayName -EQ $azureAdAppName
+    $azureADAppClient =  Search-AzureADApp -azureAdAppName $azureAdAppName
 
     if ($null -eq $azureADAppClient) {
         Write-Error ("Unable to find app {0}. Check if you are connected to the correct AAD tenant." -f $azureADAppClient) -ErrorAction Stop
     }
 
     $azureAppId = $azureADAppClient.AppId
-    
-    $tenant = Get-AzureADTenantDetail
-    $tenantId = $tenant.objectId
-    #$token = Get-AzureADToken -TenantId $tenantId -ApplicationId $AzureAdAppId -CertThumbprint $AzureAdAppCertificateThumbprint -ResourceURI "74658136-14ec-4630-ad9b-26e160ff0fc6"
-    #Write-Host $token
-    $authority = 'https://login.microsoftonline.com/common/' + $tenantId
-    #$authContext = [Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext]::new($authority)
-    #$ClientCred = [Microsoft.IdentityModel.Clients.ActiveDirectory.ClientCredential]::new($UserName, $Password)
-    $ClientCred = Get-Credential
-    $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI, $ClientCred)
-    
-    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-    $headers.Add("Authorization", $token)
-    $headers.Add("X-Requested-With", "XMLHttpRequest")
-    $headers.Add("x-ms-client-request-id", [guid]::NewGuid())
-    $headers.Add("x-ms-correlation-id", [guid]::NewGuid())
+    $azureADAppSP = Get-AzureADServicePrincipal -SearchString  $azureADAppClient.DisplayName | Where DisplayName -eq $azureADAppClient.DisplayName | where AppId -eq $azureADAppClient.AppId 
 
-    $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$azureAppId/Consent?onBehalfOfAll=true"
-    Invoke-RestMethod -Uri $url -Method POST -ErrorAction Stop -Headers $headers
+    # Check if a SP exists for the Azure AD app and create one if it doesn't
+    if ($azureADAppSP) {
+      Write-Output ("Service Principal with ID {0} for Azure AD app {1} has been found." -f $azureADAppSP.ObjectId, $azureADAppClient.DisplayName)
+    }
+    else {
+      Write-Output ("Creating new Service Principal for Azure AD app {0}." -f $azureADAppClient.DisplayName)
+      $azureADAppSP = New-AzureADServicePrincipal -AppId $azureADAppClient.AppId
+    }
+
+    $token = $null
+    
+    $token = Get-AADToken -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint
+
+    foreach ($requiredResourceAccess in $azureADAppClient.RequiredResourceAccess) {
+      # Clean scope variable
+      $scope = $null
+
+      # Builds header
+      $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+      $headers.Add("Authorization", $token)
+      $headers.Add("Content-Type", "application/json")
+
+      # Gets the service principal of Azure AD API e.g. Windows Azure Active Directory or Microsoft Graph 
+      $url = ("https://graph.windows.net/myorganization/servicePrincipals?api-version=1.6&`$filter=appId+eq+'{0}'" -f $RequiredResourceAccess.ResourceAppId)
+      $oauth2ServicePrincipal = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -Headers $headers
+
+      foreach ($resourceAccess in $RequiredResourceAccess.ResourceAccess) {
+      
+
+        # Set scope variable by searching Azure AD apps resource access scope ID's in $oauth2ServicePrincipal appRoles ID's and adding to scop variable 
+        foreach ($appRoles in $oauth2ServicePrincipal.value.appRoles) {
+          if ($appRoles.id -eq $resourceAccess.Id) {
+            $scope += ($appRoles.value + " ")
+          }
+        }
+
+        foreach ($oauth2Permissions in $oauth2ServicePrincipal.value.oauth2Permissions) {
+          if ($oauth2Permissions.id -eq $resourceAccess.Id) {
+            $scope += ($oauth2Permissions.value + " ")
+          }
+        }
+
+      }
+      $createOAuth2PermissionGrantsBody = @{
+        "clientId"="YOUR APPLICATIONS’S SERVICE PRINCIPAL OBJECT ID";
+        "consentType"="AllPrincipals";
+        "resourceId"="OBJECT ID OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
+        "scope"="PERMISSION NAME OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
+        "startTime"="0001-01-01T00:00:00";
+        "expiryTime"="9000-01-01T00:00:00"
+        }
+  
+        # Update the request body with relative details. 
+        # clientId is the objectId of the service principal that is married to the Azure AD app. 
+        # resourceId is the id of the service principal of Azure AD API e.g. Windows Azure Active Directory or Microsoft Graph
+          
+        $CreateOAuth2PermissionGrantsBody.clientId = $azureADAppSP.ObjectId
+        $CreateOAuth2PermissionGrantsBody.resourceId = $oAuth2ServicePrincipal.value.objectId
+        $CreateOAuth2PermissionGrantsBody.scope = $scope.trim()
+
+      # $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$azureAppId/Consent?onBehalfOfAll=true"
+      $url = 'https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6'
+      $response = Invoke-RestMethod -Uri $url -Method Post -ErrorAction Stop -Headers $headers -Body ( $CreateOAuth2PermissionGrantsBody | ConvertTo-Json)
+  
+      #return $response
+
+
+
+
+    }
 }
+
+
+
+
+
+
+# function Get-AzureADAPIServicePrincipal {
+#   param (
+#     $token,
+
+#   )
+#   $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+#   $headers.Add("Authorization", $token)
+#   $headers.Add("Content-Type", "application/json")
+#   $url = ("https://graph.windows.net/myorganization/servicePrincipals?api-version=1.6&`$filter=appId+eq+'{0}'" -f "00000002-0000-0000-c000-000000000000")
+#   Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -Headers $headers
+# }
+
+
+    

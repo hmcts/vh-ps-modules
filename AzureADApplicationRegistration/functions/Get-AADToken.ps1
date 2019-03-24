@@ -37,7 +37,6 @@ Function Get-AADToken {
       $authority = ('https://login.windows.net/' + $AzureTenantId)
       # Resource App ID of the app that the bearer token is issued for
       $resourceAppIdURI = 'https://graph.windows.net/'
-      #$resourceAppIdURI = 'https://main.iam.ad.ext.azure.com/'
 
       # Import identity assembly
       Add-Type -Path ($env:ProgramFiles + "\WindowsPowerShell\Modules\AzureAD\*\Microsoft.IdentityModel.Clients.ActiveDirectory.dll")

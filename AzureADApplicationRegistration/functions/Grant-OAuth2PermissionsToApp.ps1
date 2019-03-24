@@ -54,6 +54,9 @@ Function Grant-OAuth2PermissionsToApp {
 
     Write-Output ("Acquiring bearer token")
     $token = $null
+
+    Write-Output "Trying to get cert from cert:\LocalMachine\My\$($AzureAdAppCertificateThumbprint)"
+
     $token = Get-AADToken -AzureTenantId $AzureTenantId -AzureAdAppId $AzureAdAppId -AzureAdAppCertificateThumbprint $AzureAdAppCertificateThumbprint
 
     # Main logic for granting permissions

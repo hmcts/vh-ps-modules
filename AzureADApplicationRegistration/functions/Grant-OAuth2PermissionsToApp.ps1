@@ -1,5 +1,5 @@
 # Based on https://gitlab.com/Lieben/assortedFunctions/blob/master/Grant-OAuth2PermissionsToApp.ps1
-Function   {
+Function Grant-OAuth2PermissionsToApp {
     Param(
         [Parameter(Mandatory)]
         [Alias("AppName", "AzureADApplicationName")]

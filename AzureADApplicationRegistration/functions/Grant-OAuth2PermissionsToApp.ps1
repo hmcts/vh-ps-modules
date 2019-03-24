@@ -1,8 +1,8 @@
 # Based on https://gitlab.com/Lieben/assortedFunctions/blob/master/Grant-OAuth2PermissionsToApp.ps1
-Function Grant-OAuth2PermissionsToApp {
+Function   {
     Param(
         [Parameter(Mandatory)]
-        [Alias("AppName")]
+        [Alias("AppName", "AzureADApplicationName")]
         $azureAdAppName,
         [Parameter(Position = 0, Mandatory = $true)]
         [ValidateScript( {
@@ -21,6 +21,7 @@ Function Grant-OAuth2PermissionsToApp {
         [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})] 
         $AzureAdAppCertificateThumbprint,
         [Parameter(Mandatory)]
+        [Alias("AzureAdAppIdSecondary")]
         $AzureAdAppId
     )
 
@@ -88,19 +89,26 @@ Function Grant-OAuth2PermissionsToApp {
             }
         }
 
-        # If exiting Granted Resource Access has been set on a Azure AD App's Service Principal exist we might want to patch them
-        # if not we want to grant new Resource Access permissions
+        # If exiting Granted Resource Access has been set on a Azure AD App's Service Principal we might want to patch them if new permissions have been set on Azure AD app 
+        # if not we want to grant new Resource Access permissions. This will create new object in "oauth2PermissionGrants".
         if ($existingOAuth2PermissionGrants.value.resourceId -contains $oauth2ServicePrincipal.value.objectId) {
 
-            # Compare existing scope to required scope patch if scope needs updating
+            Write-Output ("There are {0} exiting permission grants" -f $existingOAuth2PermissionGrants.value.resourceId.Count)
+            Write-Output ("Checking permission scope for {0} resource" -f $oauth2ServicePrincipal.value.appDisplayName)
+
+            # Compare existing scope to required scope,
+            # patch if scope needs updating
             foreach ($existingPermissionGrant in $existingOAuth2PermissionGrants.value) {
 
                 # Compare existing and required scopes for a particular Resource Access. If the scopes are different then patch the existing resource access scope,
                 # skip if the scopes are the same of the required and existing Resource Access
+                Write-Output "Checking if new permission scope has changed"
+
                 if ($existingPermissionGrant.resourceId -eq $oauth2ServicePrincipal.value.objectId) {
                     if ($existingPermissionGrant.scope -ne $scope.trim()) {
-
-                        #### code goes here for patching the Granted Resource Access permissions
+                      
+                        Write-Output "Permission scope has changed. Updating now..."
+                        # body for patching existing permission grants
                         $patchExistingPermissionGrantsBody = @{
                             "scope" = "PERMISSION NAME OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT"
                         }
@@ -110,41 +118,39 @@ Function Grant-OAuth2PermissionsToApp {
 
                         $url = ("https://graph.windows.net/myorganization/oauth2PermissionGrants/{0}?api-version=1.6" -f $existingPermissionGrant.objectId)
                         $response = Invoke-RestMethod -Uri $url -Method Patch -ErrorAction Stop -Headers $headers -Body ( $patchExistingPermissionGrantsBody | ConvertTo-Json)
+                        $response | select *
                     }
                 }
-
-                #$oauth2ServicePrincipal.value.objectId
-              
             }
-          
         }
-        else {
+
+        # Run this block if new Azure AD API has been selected as Required Access
+        elseif ($existingOAuth2PermissionGrants.value.resourceId -notcontains $oauth2ServicePrincipal.value.objectId) {
+            # Update the request body with relative details. 
+            # clientId is the objectId of the service principal that is married to the Azure AD app. 
+            # resourceId is the id of the service principal of Azure AD API e.g. Windows Azure Active Directory or Microsoft Graph
+            Write-Output ("Granting permissions for {0} with {1} resource" -f $azureADAppClient.DisplayName, $oauth2ServicePrincipal.value.appDisplayName)
 
             $createOAuth2PermissionGrantsBody = @{
-                "clientId"    = "YOUR APPLICATIONS’S SERVICE PRINCIPAL OBJECT ID";
+                "clientId"    = "YOUR APPLICATION’S SERVICE PRINCIPAL OBJECT ID";
                 "consentType" = "AllPrincipals";
                 "resourceId"  = "OBJECT ID OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
                 "scope"       = "PERMISSION NAME OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
                 "startTime"   = "0001-01-01T00:00:00";
                 "expiryTime"  = "9000-01-01T00:00:00"
             }
-  
-            # Update the request body with relative details. 
-            # clientId is the objectId of the service principal that is married to the Azure AD app. 
-            # resourceId is the id of the service principal of Azure AD API e.g. Windows Azure Active Directory or Microsoft Graph
-          
+
+            # Update the request body
             $CreateOAuth2PermissionGrantsBody.clientId = $azureADAppSP.ObjectId
             $CreateOAuth2PermissionGrantsBody.resourceId = $oAuth2ServicePrincipal.value.objectId
             $CreateOAuth2PermissionGrantsBody.scope = $scope.trim()
 
-            # $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$azureAppId/Consent?onBehalfOfAll=true"
             $url = 'https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6'
             $response = Invoke-RestMethod -Uri $url -Method Post -ErrorAction Stop -Headers $headers -Body ( $CreateOAuth2PermissionGrantsBody | ConvertTo-Json)
-  
-            #return $response
           
         }
-        
-        
+        else {
+            Write-Output "Noting to grant or update."
+        }
     }
 }

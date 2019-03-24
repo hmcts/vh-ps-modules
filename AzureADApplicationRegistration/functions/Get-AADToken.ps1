@@ -29,23 +29,20 @@ Function Get-AADToken {
     begin {
       $Token = $null
       # Get the certificate form local certificate store that will e used to authenticate with Service Principal
-      Write-Output ("Trying to get cert from cert:\LocalMachine\My\{0}" -f $AzureAdAppCertificateThumbprint)
       If ($AzureAdAppCertificateThumbprint) {
-        $sPCertificate = (Get-ChildItem -Path ("cert:\LocalMachine\My\{0}" -f $AzureAdAppCertificateThumbprint))
+        $sPCertificate = (Get-ChildItem -Path "cert:\LocalMachine\My\$($AzureAdAppCertificateThumbprint)")
         }
       # Set Authority to Azure AD Tenant
       $authority = ('https://login.windows.net/' + $AzureTenantId)
       # Resource App ID of the app that the bearer token is issued for
       $resourceAppIdURI = 'https://graph.windows.net/'
+      #$resourceAppIdURI = 'https://main.iam.ad.ext.azure.com/'
 
       # Import identity assembly
       Add-Type -Path ($env:ProgramFiles + "\WindowsPowerShell\Modules\AzureAD\*\Microsoft.IdentityModel.Clients.ActiveDirectory.dll")
 
     }
     process {
-      Write-Output ("Trying to get cert from cert:\LocalMachine\My\{0}" -f $AzureAdAppCertificateThumbprint)
-      Write-Output ( "cert subject" -f $sPCertificat.subject)
-
       Try {
         $ClientCred = [Microsoft.IdentityModel.Clients.ActiveDirectory.ClientAssertionCertificate]::new($AzureAdAppId, $sPCertificate)
         $authContext = [Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext]::new($authority)

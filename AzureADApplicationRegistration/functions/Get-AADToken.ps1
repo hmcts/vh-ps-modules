@@ -29,9 +29,9 @@ Function Get-AADToken {
     begin {
       $Token = $null
       # Get the certificate form local certificate store that will e used to authenticate with Service Principal
-      Write-Output "Trying to get cert from cert:\LocalMachine\My\$($AzureAdAppCertificateThumbprint)"
+      Write-Output ("Trying to get cert from cert:\LocalMachine\My\{0}" -f $AzureAdAppCertificateThumbprint)
       If ($AzureAdAppCertificateThumbprint) {
-        $sPCertificate = (Get-ChildItem -Path "cert:\LocalMachine\My\$($AzureAdAppCertificateThumbprint)")
+        $sPCertificate = (Get-ChildItem -Path ("cert:\LocalMachine\My\{0}" -f $AzureAdAppCertificateThumbprint))
         }
       # Set Authority to Azure AD Tenant
       $authority = ('https://login.windows.net/' + $AzureTenantId)
@@ -43,7 +43,7 @@ Function Get-AADToken {
 
     }
     process {
-      Write-Output "Trying to get cert from cert:\LocalMachine\My\$($AzureAdAppCertificateThumbprint)"
+      Write-Output ("Trying to get cert from cert:\LocalMachine\My\{0}" -f $AzureAdAppCertificateThumbprint)
       Write-Output ( "cert subject" -f $sPCertificat.subject)
 
       Try {

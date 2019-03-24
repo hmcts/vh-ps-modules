@@ -44,6 +44,9 @@ Function Get-AADToken {
 
     }
     process {
+      Write-Output "Trying to get cert from cert:\LocalMachine\My\$($AzureAdAppCertificateThumbprint)"
+      Write-Output ( "cert subject" -f $sPCertificat.subject)
+
       Try {
         $ClientCred = [Microsoft.IdentityModel.Clients.ActiveDirectory.ClientAssertionCertificate]::new($AzureAdAppId, $sPCertificate)
         $authContext = [Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext]::new($authority)

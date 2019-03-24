@@ -18,6 +18,7 @@ Function Grant-OAuth2PermissionsToApp {
         [Alias("AzureTenantIdSecondary")]
         $AzureTenantId,
         [string]
+        [Parameter(Mandatory)]
         [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})]
         [Alias("AzureAdAppCertificateThumbprintSecondary")]
         $AzureAdAppCertificateThumbprint,

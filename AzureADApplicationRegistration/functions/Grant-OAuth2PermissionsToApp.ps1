@@ -52,6 +52,7 @@ Function Grant-OAuth2PermissionsToApp {
     foreach ($requiredResourceAccess in $azureADAppClient.RequiredResourceAccess) {
       # Clean scope variable
       $scope = $null
+      $appRoleScopeArray = @()
 
       # Builds header that will be used in all API requests
       $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
@@ -65,19 +66,19 @@ Function Grant-OAuth2PermissionsToApp {
       foreach ($resourceAccess in $RequiredResourceAccess.ResourceAccess) {
       
 
-        # Set scope variable by searching Azure AD apps resource access scope ID's in $oauth2ServicePrincipal appRoles ID's and adding to scop variable 
-        foreach ($appRoles in $oauth2ServicePrincipal.value.appRoles) {
-          if ($appRoles.id -eq $resourceAccess.Id) {
-            $scope += ($appRoles.value + " ")
-          }
-        }
-
+        # Set scope variable by searching Azure AD apps resource access scope ID's in $oauth2ServicePrincipal object and adding to scop variable 
         foreach ($oauth2Permissions in $oauth2ServicePrincipal.value.oauth2Permissions) {
           if ($oauth2Permissions.id -eq $resourceAccess.Id) {
             $scope += ($oauth2Permissions.value + " ")
           }
         }
 
+        # Set scope variable by searching Azure AD apps resource access scope ID's in $oauth2ServicePrincipal object and adding to scop variable 
+        foreach ($appRoles in $oauth2ServicePrincipal.value.appRoles) {
+          if ($appRoles.id -eq $resourceAccess.Id) {
+            $appRoleIdScopeArray.add($appRoles.id)
+          }
+        }
       }
 
       # Get existing OAuth2 Permission Grants
@@ -109,12 +110,11 @@ Function Grant-OAuth2PermissionsToApp {
       # $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$azureAppId/Consent?onBehalfOfAll=true"
       $url = 'https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6'
       $response = Invoke-RestMethod -Uri $url -Method Post -ErrorAction Stop -Headers $headers -Body ( $CreateOAuth2PermissionGrantsBody | ConvertTo-Json)
-  
-      #return $response
+      
 
-
-
-
+      foreach($appRoleId in $appRoleIdScopeArray){
+        New-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -Id $appRoleId  -ResourceId $oAuth2ServicePrincipal.value.objectId -PrincipalId $azureADAppSP.ObjectId
+      }
     }
 }
 

@@ -19,7 +19,7 @@ Function Grant-OAuth2PermissionsToApp {
         $AzureTenantId,
         [string]
         [Parameter(Mandatory)]
-        [ValidateScript( {Test-Path ("Cert:\LocalMachine\My\" + "$_")})]
+        [ValidateScript( { Test-Path ("Cert:\LocalMachine\My\" + "$_") })]
         [Alias("AzureAdAppCertificateThumbprintSecondary")]
         $AzureAdAppCertificateThumbprint,
         [Parameter(Mandatory)]
@@ -40,7 +40,7 @@ Function Grant-OAuth2PermissionsToApp {
     }
 
     # Find Azure AD App's Service Principal
-    $azureADAppSP = Get-AzureADServicePrincipal -SearchString  $azureADAppClient.DisplayName | Where DisplayName -eq $azureADAppClient.DisplayName | where AppId -eq $azureADAppClient.AppId 
+    $azureADAppSP = Get-AzureADServicePrincipal -SearchString  $azureADAppClient.DisplayName | Where-Object DisplayName -eq $azureADAppClient.DisplayName | Where-Object AppId -eq $azureADAppClient.AppId 
 
     # Check if a SP exists for the Azure AD app and create one if it doesn't
     if ($azureADAppSP) {
@@ -59,9 +59,9 @@ Function Grant-OAuth2PermissionsToApp {
 
     # Main logic for granting permissions
     foreach ($requiredResourceAccess in $azureADAppClient.RequiredResourceAccess) {
-      # Clean scope variable
-      $scope = $null
-      $appRoleScopeArray = @()
+        # Clean scope variable
+        $delegatedPermissionsScope = $null
+        $applicationPermissionsScope = @()
 
         # Builds header that will be used in all API requests
         $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
@@ -76,18 +76,21 @@ Function Grant-OAuth2PermissionsToApp {
         $url = ("https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6&`$filter=clientId+eq+'{0}'" -f $azureADAppSP.ObjectId)
         $existingOAuth2PermissionGrants = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -Headers $headers
 
+        # Get all application permissions for the current service principal 
+        $spApplicationPermissions = Get-AzureADServiceAppRoleAssignedTo -ObjectId $azureADAppSP.ObjectId -All $true | Where-Object { $_.PrincipalType -eq "ServicePrincipal" }
+
+        $spApplicationPermissions.id
         foreach ($resourceAccess in $RequiredResourceAccess.ResourceAccess) {
-      
-            # Set scope variable by searching Azure AD apps resource access scope ID's in $oauth2ServicePrincipal appRoles ID's and adding to scop variable 
+
             foreach ($appRoles in $oauth2ServicePrincipal.value.appRoles) {
                 if ($appRoles.id -eq $resourceAccess.Id) {
-                    $scope += ($appRoles.value + " ")
+                    $applicationPermissionsScope += $appRoles.id
                 }
             }
 
             foreach ($oauth2Permissions in $oauth2ServicePrincipal.value.oauth2Permissions) {
                 if ($oauth2Permissions.id -eq $resourceAccess.Id) {
-                    $scope += ($oauth2Permissions.value + " ")
+                    $delegatedPermissionsScope += ($oauth2Permissions.value + " ")
                 }
             }
         }
@@ -108,20 +111,49 @@ Function Grant-OAuth2PermissionsToApp {
                 Write-Output "Checking if new permission scope has changed"
 
                 if ($existingPermissionGrant.resourceId -eq $oauth2ServicePrincipal.value.objectId) {
-                    if ($existingPermissionGrant.scope -ne $scope.trim()) {
-                      
-                        Write-Output "Permission scope has changed. Updating now..."
-                        # body for patching existing permission grants
-                        $patchExistingPermissionGrantsBody = @{
-                            "scope" = "PERMISSION NAME OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT"
-                        }
-                  
-                        # Replace the scope value in the body that will be used to patch the Granted Resource Access permissions
-                        $patchExistingPermissionGrantsBody.scope = $scope.trim()
 
-                        $url = ("https://graph.windows.net/myorganization/oauth2PermissionGrants/{0}?api-version=1.6" -f $existingPermissionGrant.objectId)
-                        $response = Invoke-RestMethod -Uri $url -Method Patch -ErrorAction Stop -Headers $headers -Body ( $patchExistingPermissionGrantsBody | ConvertTo-Json)
-                        $response | select *
+                    if ($delegatedPermissionsScope) {
+                        if ($existingPermissionGrant.scope -ne $delegatedPermissionsScope.trim()) {
+                      
+                            Write-Output "Permission scope has changed. Updating now..."
+                            # body for patching existing permission grants
+                            $patchExistingPermissionGrantsBody = @{
+                                "scope" = "PERMISSION NAME OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT"
+                            }
+                            
+                            # Replace the scope value in the body that will be used to patch the Granted Resource Access permissions
+                            $patchExistingPermissionGrantsBody.scope = $delegatedPermissionsScope.trim()
+                            $patchExistingPermissionGrantsBody.scope = $null
+
+                            $url = ("https://graph.windows.net/myorganization/oauth2PermissionGrants/{0}?api-version=1.6" -f $existingPermissionGrant.objectId)
+                            Invoke-RestMethod -Uri $url -Method Patch -ErrorAction Stop -Headers $headers -Body ( $patchExistingPermissionGrantsBody | ConvertTo-Json)
+                        }
+                        else {
+                            Write-Output "Permission scope has not changed"
+                        }
+                    }
+                    else {
+                        Write-Output ("Removing existing permission grant {0} with ID {1}" -f $oauth2ServicePrincipal.value.appDisplayName, $existingPermissionGrant.objectId)
+                        Remove-AzureADOAuth2PermissionGrant -ObjectId $existingPermissionGrant.objectId
+                    }
+
+                    # If application permissions are present the need to be either added or removed
+                    if ($applicationPermissionsScope) {
+                        # Iterates through each App permission ID and if it is NOT part of existing application permissions the add new.
+                        foreach ($appRoleId in $applicationPermissionsScope) {
+                            if ($spApplicationPermissions.id -notcontains $appRoleId ) {
+
+                                Write-Output ("Granting application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $appRoleId)
+                                New-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -Id $appRoleId  -ResourceId $oAuth2ServicePrincipal.value.objectId -PrincipalId $azureADAppSP.ObjectId
+                            }
+                        }
+                    }
+                    # if there are no application permission ids present in $applicationPermissionsScope it means they have been removed from the app itself.
+                    else {
+                        foreach ($permission in $spApplicationPermissions) {
+                            Write-Output ("Removing application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $permission.ObjectId)
+                            Remove-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -AppRoleAssignmentId $permission.ObjectId
+                        }
                     }
                 }
             }
@@ -129,31 +161,53 @@ Function Grant-OAuth2PermissionsToApp {
 
         # Run this block if new Azure AD API has been selected as Required Access
         elseif ($existingOAuth2PermissionGrants.value.resourceId -notcontains $oauth2ServicePrincipal.value.objectId) {
-            # Update the request body with relative details. 
-            # clientId is the objectId of the service principal that is married to the Azure AD app. 
-            # resourceId is the id of the service principal of Azure AD API e.g. Windows Azure Active Directory or Microsoft Graph
-            Write-Output ("Granting permissions for {0} with {1} resource" -f $azureADAppClient.DisplayName, $oauth2ServicePrincipal.value.appDisplayName)
+            if ($delegatedPermissionsScope) {
+                # Update the request body with relative details. 
+                # clientId is the objectId of the service principal that is married to the Azure AD app. 
+                # resourceId is the id of the service principal of Azure AD API e.g. Windows Azure Active Directory or Microsoft Graph
+                Write-Output ("Granting permissions for {0} with {1} resource" -f $azureADAppClient.DisplayName, $oauth2ServicePrincipal.value.appDisplayName)
 
-            $createOAuth2PermissionGrantsBody = @{
-                "clientId"    = "YOUR APPLICATION’S SERVICE PRINCIPAL OBJECT ID";
-                "consentType" = "AllPrincipals";
-                "resourceId"  = "OBJECT ID OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
-                "scope"       = "PERMISSION NAME OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
-                "startTime"   = "0001-01-01T00:00:00";
-                "expiryTime"  = "9000-01-01T00:00:00"
+                $createOAuth2PermissionGrantsBody = @{
+                    "clientId"    = "YOUR APPLICATION’S SERVICE PRINCIPAL OBJECT ID";
+                    "consentType" = "AllPrincipals";
+                    "resourceId"  = "OBJECT ID OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
+                    "scope"       = "PERMISSION NAME OF THE SERVICE PRINCIPAL REPRESENTING AZURE AD APPLICATION IN YOUR TENANT";
+                    "startTime"   = "0001-01-01T00:00:00";
+                    "expiryTime"  = "9000-01-01T00:00:00"
+                }
+
+                # Update the request body
+                $CreateOAuth2PermissionGrantsBody.clientId = $azureADAppSP.ObjectId
+                $CreateOAuth2PermissionGrantsBody.resourceId = $oAuth2ServicePrincipal.value.objectId
+                $CreateOAuth2PermissionGrantsBody.scope = $delegatedPermissionsScope.trim()
+
+                $url = 'https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6'
+                Invoke-RestMethod -Uri $url -Method Post -ErrorAction Stop -Headers $headers -Body ( $CreateOAuth2PermissionGrantsBody | ConvertTo-Json)
             }
 
-            # Update the request body
-            $CreateOAuth2PermissionGrantsBody.clientId = $azureADAppSP.ObjectId
-            $CreateOAuth2PermissionGrantsBody.resourceId = $oAuth2ServicePrincipal.value.objectId
-            $CreateOAuth2PermissionGrantsBody.scope = $scope.trim()
-
-            $url = 'https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6'
-            $response = Invoke-RestMethod -Uri $url -Method Post -ErrorAction Stop -Headers $headers -Body ( $CreateOAuth2PermissionGrantsBody | ConvertTo-Json)
-          
+            # If application permissions are present the need to be either added or removed
+            if ($applicationPermissionsScope) {
+                # Iterates through each App permission ID and if it is NOT part of existing application permissions the add new.
+                foreach ($appRoleId in $applicationPermissionsScope) {
+                    if ($spApplicationPermissions.id -notcontains $appRoleId ) {
+            
+                        Write-Output ("Granting application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $appRoleId)
+                        New-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -Id $appRoleId  -ResourceId $oAuth2ServicePrincipal.value.objectId -PrincipalId $azureADAppSP.ObjectId
+                    }
+                }
+            }
+            # if there are no application permission ids present in $applicationPermissionsScope it means they have been removed from the app itself.
+            else {
+                foreach ($permission in $spApplicationPermissions) {
+                    Write-Output ("Removing application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $permission.ObjectId)
+                    Remove-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -AppRoleAssignmentId $permission.ObjectId
+                }
+            }
         }
         else {
             Write-Output "Noting to grant or update."
         }
     }
+
+
 }

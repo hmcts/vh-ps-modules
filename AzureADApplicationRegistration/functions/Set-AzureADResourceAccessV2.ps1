@@ -14,7 +14,7 @@ function Set-AzureADResourceAccessV2 {
     begin {
 
         # Get the permissions list form json
-        $jsonFile = Get-Content $resourceAccessDefinition  | ConvertFrom-Json
+        $jsonFile = Get-Content $resourceAccessDefinition | ConvertFrom-Json
 
         # Change the app name with '_'
         $azureAdAppName = Format-AppName -AADAppName $azureAdAppName
@@ -54,7 +54,8 @@ function Set-AzureADResourceAccessV2 {
         
                         # add values to object
                         $requiredResourceAccessObject.ResourceAccess += $addResourceAccess
-                    } else {
+                    }
+                    else {
                         Write-Output ("Required Resource Access ID '{0}' already defined, skipping.." -f $resourceAccess.id)
                     }
                 }
@@ -64,7 +65,8 @@ function Set-AzureADResourceAccessV2 {
                     $requiredResourceAccessObject.ResourceAppId = $resource.resourceAppId
                     $currentRequiredResourceAccess.add($requiredResourceAccessObject)
                     Write-Output ("New Resource with Id '{0}' to be added" -f $requiredResourceAccessObject.ResourceAppId)
-                } else {
+                }
+                else {
                     Write-Output ("New resource '{0}' was declared among required resources but did specify any resource accesses" -f $resource.resourceAppName)
                 }
             }
@@ -95,13 +97,23 @@ function Set-AzureADResourceAccessV2 {
                             Write-Output ("No new Resource Access permissions found to be set for '{0}'." -f $resource.resourceAppName)
                         }
                         else {
-                            $currentRequiredResourceAccess.add($requiredResourceAccessObject.ResourceAccess)                            
+                            # iterate through current required resource access
+                            foreach ($cRequiredResourceAccess in $currentRequiredResourceAccess) {
+                                # if current resource access id is the same as required resource access id then amend the required resource access as per resourceAccess.json
+                                if ($cRequiredResourceAccess.ResourceAppId -eq $resource.resourceAppId) {
+                                    foreach ($rResourceAccess in $requiredResourceAccessObject.ResourceAccess) {
+                                        if ($cRequiredResourceAccess.ResourceAccess.Id -notcontains $rResourceAccess.Id) {
+                                            $cRequiredResourceAccess.ResourceAccess += $requiredResourceAccessObject.ResourceAccess
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-    }    
+    }
     end {
         Set-AzureADApplication -ObjectId $azureADAppClient.ObjectId -RequiredResourceAccess $currentRequiredResourceAccess
     }

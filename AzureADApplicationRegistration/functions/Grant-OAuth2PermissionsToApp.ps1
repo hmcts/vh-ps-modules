@@ -45,6 +45,16 @@ Function Grant-OAuth2PermissionsToApp {
     # Check if a SP exists for the Azure AD app and create one if it doesn't
     if ($azureADAppSP) {
         Write-Output ("Service Principal with ID {0} for Azure AD app {1} has been found." -f $azureADAppSP.ObjectId, $azureADAppClient.DisplayName)
+        Write-Output ("Cleaning up the the service principal..." -f $azureADAppSP.ObjectId, $azureADAppClient.DisplayName)
+        Remove-AzureADServicePrincipal -ObjectId $azureADAppSP.ObjectId
+        $azureADAppSP = New-AzureADServicePrincipal -AppId $azureADAppClient.AppId
+
+        $i = 0
+        do {
+            Write-Host (".") -NoNewline
+            $i++
+            Start-Sleep 1
+        }while ($i -lt 30)
     }
     else {
         Write-Output ("Creating new Service Principal for Azure AD app {0}." -f $azureADAppClient.DisplayName)
@@ -162,7 +172,6 @@ Function Grant-OAuth2PermissionsToApp {
                 }
             }
         }
-
         # Run this block if new Azure AD API has been selected as Required Access
         elseif ($existingOAuth2PermissionGrants.value.resourceId -notcontains $oauth2ServicePrincipal.value.objectId) {
             if ($delegatedPermissionsScope) {

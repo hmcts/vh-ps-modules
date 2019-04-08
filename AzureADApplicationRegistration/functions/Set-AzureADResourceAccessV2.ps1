@@ -24,7 +24,6 @@ function Set-AzureADResourceAccessV2 {
 
         if ($null -eq $azureADAppClient) {
             Write-Error ("Unable to find app {0}. Check if you are connected to the correct AAD tenant." -f $azureADAppClient) -ErrorAction Stop
-            
         }
 
         # Create new variable with existing permissions
@@ -32,9 +31,16 @@ function Set-AzureADResourceAccessV2 {
 
         # Input
         $requestedRequiredResourceAccess = $jsonFile.RequiredResourceAccess
+
     }
-    
     process {
+        # Remove resource access objects if they are no present in $requestedRequiredResourceAccess 
+        foreach ($currentRequiredResourceAccessObject in $currentRequiredResourceAccess) {
+            if ($requestedRequiredResourceAccess.resourceAppId -notcontains $currentRequiredResourceAccessObject.ResourceAppId) {
+                $currentRequiredResourceAccess = $currentRequiredResourceAccess | Where-Object ResourceAppId -ne $currentRequiredResourceAccessObject.ResourceAppId
+            }
+        }
+        
         foreach ($resource in $requestedRequiredResourceAccess) {
             Write-Output   ("Checking if Required Resource Name '{0}' with Required Resource Id: '{1}' has been set..." -f $resource.resourceAppName, $resource.resourceAppId)
 

@@ -129,5 +129,7 @@ function Set-AzureADResourceAccessV2 {
     }
     end {
         Set-AzureADApplication -ObjectId $azureADAppClient.ObjectId -RequiredResourceAccess $currentRequiredResourceAccess
+        Start-Sleep 30
+    
     }
 }

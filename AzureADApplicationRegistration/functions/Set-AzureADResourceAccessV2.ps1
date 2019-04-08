@@ -97,6 +97,13 @@ function Set-AzureADResourceAccessV2 {
                                 # add values to object
                                 $requiredResourceAccessObject.ResourceAccess += $ResourceAccess                        
                             }
+
+                            # Remove required resource access form the object if it is not present in $requestedRequiredResourceAccess
+                            foreach ($existingRequiredResourceResourceAccessObject in $existingRequiredResource.ResourceAccess) {
+                                if ($resource.resourceAccess.id -notcontains $existingRequiredResourceResourceAccessObject.Id) {
+                                    $existingRequiredResource.ResourceAccess = $existingRequiredResource.ResourceAccess | Where-Object id -ne $existingRequiredResourceResourceAccessObject.Id
+                                }
+                            }
                         }
                         # Add the new Resource Access to the Existing resource access object
                         if ($null -EQ $requiredResourceAccessObject.ResourceAccess) {

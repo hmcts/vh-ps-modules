@@ -76,10 +76,10 @@ Function Grant-OAuth2PermissionsToApp {
         $url = ("https://graph.windows.net/myorganization/oauth2PermissionGrants?api-version=1.6&`$filter=clientId+eq+'{0}'" -f $azureADAppSP.ObjectId)
         $existingOAuth2PermissionGrants = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -Headers $headers
 
-        # Get all application permissions for the current service principal 
+        # Get all application permissions for the current service principal
         $spApplicationPermissions = Get-AzureADServiceAppRoleAssignedTo -ObjectId $azureADAppSP.ObjectId -All $true | Where-Object { $_.PrincipalType -eq "ServicePrincipal" }
 
-        $spApplicationPermissions.id
+        #$spApplicationPermissions.id
         foreach ($resourceAccess in $RequiredResourceAccess.ResourceAccess) {
 
             foreach ($appRoles in $oauth2ServicePrincipal.value.appRoles) {
@@ -144,7 +144,11 @@ Function Grant-OAuth2PermissionsToApp {
                             if ($spApplicationPermissions.id -notcontains $appRoleId ) {
 
                                 Write-Output ("Granting application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $appRoleId)
+                                # !!! Error action has been set to continue silently because there is a know issue when the command returns Bad Requested but in fact it applies the permissions (https://github.com/MicrosoftDocs/azure-docs/issues/22700)
+                                $OriginalErrorActionPreference = $ErrorActionPreference
+                                $ErrorActionPreference = 'silentlycontinue' 
                                 New-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -Id $appRoleId  -ResourceId $oAuth2ServicePrincipal.value.objectId -PrincipalId $azureADAppSP.ObjectId
+                                $ErrorActionPreference = $OriginalErrorActionPreference
                             }
                         }
                     }
@@ -191,8 +195,11 @@ Function Grant-OAuth2PermissionsToApp {
                 foreach ($appRoleId in $applicationPermissionsScope) {
                     if ($spApplicationPermissions.id -notcontains $appRoleId ) {
             
-                        Write-Output ("Granting application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $appRoleId)
+                        # !!! Error action has been set to continue silently because there is a know issue when the command returns Bad Requested but in fact it applies the permissions (https://github.com/MicrosoftDocs/azure-docs/issues/22700)
+                        $OriginalErrorActionPreference = $ErrorActionPreference
+                        $ErrorActionPreference = 'silentlycontinue' 
                         New-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -Id $appRoleId  -ResourceId $oAuth2ServicePrincipal.value.objectId -PrincipalId $azureADAppSP.ObjectId
+                        $ErrorActionPreference = $OriginalErrorActionPreference
                     }
                 }
             }
@@ -208,6 +215,4 @@ Function Grant-OAuth2PermissionsToApp {
             Write-Output "Noting to grant or update."
         }
     }
-
-
 }

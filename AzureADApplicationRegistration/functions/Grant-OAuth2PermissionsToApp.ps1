@@ -45,20 +45,17 @@ Function Grant-OAuth2PermissionsToApp {
     # Check if a SP exists for the Azure AD app and create one if it doesn't
     if ($azureADAppSP) {
         Write-Output ("Service Principal with ID {0} for Azure AD app {1} has been found." -f $azureADAppSP.ObjectId, $azureADAppClient.DisplayName)
-        Write-Output ("Cleaning up the the service principal..." -f $azureADAppSP.ObjectId, $azureADAppClient.DisplayName)
-        Remove-AzureADServicePrincipal -ObjectId $azureADAppSP.ObjectId
-        $azureADAppSP = New-AzureADServicePrincipal -AppId $azureADAppClient.AppId
-
-        $i = 0
-        do {
-            Write-Host (".") -NoNewline
-            $i++
-            Start-Sleep 1
-        }while ($i -lt 30)
     }
     else {
         Write-Output ("Creating new Service Principal for Azure AD app {0}." -f $azureADAppClient.DisplayName)
         $azureADAppSP = New-AzureADServicePrincipal -AppId $azureADAppClient.AppId
+
+        # $i = 0
+        # do {
+        #     Write-Host (".") -NoNewline
+        #     $i++
+        #     Start-Sleep 1
+        # }while ($i -lt 10)
     }
 
     # Get bearer token
@@ -87,19 +84,22 @@ Function Grant-OAuth2PermissionsToApp {
         $existingOAuth2PermissionGrants = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -Headers $headers
 
         # Get all application permissions for the current service principal
-        $spApplicationPermissions = Get-AzureADServiceAppRoleAssignedTo -ObjectId $azureADAppSP.ObjectId -All $true | Where-Object { $_.PrincipalType -eq "ServicePrincipal" }
+        #$spApplicationPermissions = Get-AzureADServiceAppRoleAssignedTo -ObjectId $azureADAppSP.ObjectId -All $true | Where-Object { $_.PrincipalType -eq "ServicePrincipal" }
 
-        #$spApplicationPermissions.id
+        $url = ("https://graph.windows.net/myorganization/servicePrincipals/{0}/appRoleAssignedTo?api-version=1.6&`$filter=principalDisplayName+eq+'vh_example_api_preview'" -f $oauth2ServicePrincipal.value.objectId, $azureADAppClient.DisplayName)
+        $spApplicationPermissions = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop -Headers $headers
+
+        # Splits out App roles and delegated permissions in separate objects
         foreach ($resourceAccess in $RequiredResourceAccess.ResourceAccess) {
 
             foreach ($appRoles in $oauth2ServicePrincipal.value.appRoles) {
-                if ($appRoles.id -eq $resourceAccess.Id) {
+                if ($appRoles.id -eq $resourceAccess.Id -and $resourceAccess.Type -eq "Role") {
                     $applicationPermissionsScope += $appRoles.id
                 }
             }
 
             foreach ($oauth2Permissions in $oauth2ServicePrincipal.value.oauth2Permissions) {
-                if ($oauth2Permissions.id -eq $resourceAccess.Id) {
+                if ($oauth2Permissions.id -eq $resourceAccess.Id -and $resourceAccess.Type -eq "Scope") {
                     $delegatedPermissionsScope += ($oauth2Permissions.value + " ")
                 }
             }
@@ -133,7 +133,7 @@ Function Grant-OAuth2PermissionsToApp {
                             
                             # Replace the scope value in the body that will be used to patch the Granted Resource Access permissions
                             $patchExistingPermissionGrantsBody.scope = $delegatedPermissionsScope.trim()
-                            $patchExistingPermissionGrantsBody.scope = $null
+
 
                             $url = ("https://graph.windows.net/myorganization/oauth2PermissionGrants/{0}?api-version=1.6" -f $existingPermissionGrant.objectId)
                             Invoke-RestMethod -Uri $url -Method Patch -ErrorAction Stop -Headers $headers -Body ( $patchExistingPermissionGrantsBody | ConvertTo-Json)
@@ -147,11 +147,11 @@ Function Grant-OAuth2PermissionsToApp {
                         Remove-AzureADOAuth2PermissionGrant -ObjectId $existingPermissionGrant.objectId
                     }
 
-                    # If application permissions are present the need to be either added or removed
+                    # If application permissions are present they might need to be either added or removed
                     if ($applicationPermissionsScope) {
                         # Iterates through each App permission ID and if it is NOT part of existing application permissions the add new.
                         foreach ($appRoleId in $applicationPermissionsScope) {
-                            if ($spApplicationPermissions.id -notcontains $appRoleId ) {
+                            if ($spApplicationPermissions.value.Id -notcontains $appRoleId ) {
 
                                 Write-Output ("Granting application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $appRoleId)
                                 # !!! Error action has been set to continue silently because there is a know issue when the command returns Bad Requested but in fact it applies the permissions (https://github.com/MicrosoftDocs/azure-docs/issues/22700)
@@ -160,6 +160,13 @@ Function Grant-OAuth2PermissionsToApp {
                                 New-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -Id $appRoleId  -ResourceId $oAuth2ServicePrincipal.value.objectId -PrincipalId $azureADAppSP.ObjectId
                                 $ErrorActionPreference = $OriginalErrorActionPreference
                             }
+                        }
+                        foreach ($permission in $spApplicationPermissions.value ) {
+                            if ($applicationPermissionsScope -notcontains $permission.id) {
+                                Write-Output ("Removing application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $permission.ObjectId)
+                                Remove-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -AppRoleAssignmentId $permission.ObjectId
+                            }
+
                         }
                     }
                     # if there are no application permission ids present in $applicationPermissionsScope it means they have been removed from the app itself.
@@ -202,7 +209,7 @@ Function Grant-OAuth2PermissionsToApp {
             if ($applicationPermissionsScope) {
                 # Iterates through each App permission ID and if it is NOT part of existing application permissions the add new.
                 foreach ($appRoleId in $applicationPermissionsScope) {
-                    if ($spApplicationPermissions.id -notcontains $appRoleId ) {
+                    if ($spApplicationPermissions -notcontains $appRoleId ) {
             
                         # !!! Error action has been set to continue silently because there is a know issue when the command returns Bad Requested but in fact it applies the permissions (https://github.com/MicrosoftDocs/azure-docs/issues/22700)
                         $OriginalErrorActionPreference = $ErrorActionPreference

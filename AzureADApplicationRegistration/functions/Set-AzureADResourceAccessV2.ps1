@@ -129,6 +129,7 @@ function Set-AzureADResourceAccessV2 {
     }
     end {
         Set-AzureADApplication -ObjectId $azureADAppClient.ObjectId -RequiredResourceAccess $currentRequiredResourceAccess
+        # Sleep to allow replication to take place before starting the next step
         Start-Sleep 30
     
     }

@@ -1,4 +1,4 @@
-<link href="../images/style.css" rel="stylesheet"></link>
+<link href="docs/images/style.css" rel="stylesheet"></link>
 
 # Azure Active Directory Application Registration and Provisioning
 
@@ -19,16 +19,16 @@ Once GitHub repository has been created you need to configure it accordingly:
   * VH - Admin
   * DevOps - Admin
 
-![Repository permissions](../images/github_repo_permissions.png#thumbnail)
+![Repository permissions](docs/images/github_repo_permissions.png#thumbnail)
 
 * Branches
   * master - Require pull request reviews before merging
   
-![](../images/branch_policy.png#thumbnail)
+![](docs/images/branch_policy.png#thumbnail)
 
 You need to add the correct teams to the repository so that members form these teams can edit the repo's content and so that Azure DevOps pipelines can checkout the source and report back the status of builds.
 
-![](../images/github_PR_reports.png#thumbnail)
+![](docs/images/github_PR_reports.png#thumbnail)
 
 ## Build definition - azure-pipelines.yml
 
@@ -98,11 +98,11 @@ Example **resourceAccess.json**:
 
 **GUI:**
 
-![](../images/resourceAccessGUI.png#thumbnail)
+![](docs/images/resourceAccessGUI.png#thumbnail)
 
 **GUI Manifest:**
 
-![](../images/resourceAccessManifest.png#thumbnail)
+![](docs/images/resourceAccessManifest.png#thumbnail)
 
 ## Group Membership Claims
 
@@ -136,7 +136,7 @@ Each provisioning project has to have the [Infrastructure](https://github.com/hm
 Once the repo has been created and the required content has been committed to the repo it's time to create a build pipeline that will be used to provision the application. The easiest way to create new build pipeline is to clone an existing pipeline. As an example we can use hmcts.vh-example-api-provisioning. When pipeline is cloned all the variables and variable groups required for running the provisioning job get cloned as well. It is mandatory to link the variable groups and variables defined in the build definition to the build pipeline! 
 Cloning the pipeline
 
-![](../images/clonePipeline.png#thumbnail)
+![](docs/images/clonePipeline.png#thumbnail)
 
 After cloning the pipeline we need to makes some adjustments:
 
@@ -144,7 +144,7 @@ After cloning the pipeline we need to makes some adjustments:
 * Service Connection - make sure it is set to **GitHubDevOps**
 * Repository - make sure it is set to repository containing source code
 
-![](../images/updateClonedPipeline.png#thumbnail)
+![](docs/images/updateClonedPipeline.png#thumbnail)
 
 ## Provisioning
 
@@ -152,4 +152,4 @@ Once the pipeline has been configured select **Save & Queue**. This will now que
 
 One the resourceAccess.json and azure-pipelines.yml files have been amended accordingly and tested in **Preview** environment we can start provisioning the applications in other environments like **sandbox**. To provision the application in **sandbox** environment we need to change the **EnvironmentName** at queue time. To do that queue new job:
 
-![](../images/queueProvisioningJob.png#thumbnail)
+![](docs/images/queueProvisioningJob.png#thumbnail)

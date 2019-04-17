@@ -1,0 +1,5 @@
+img[src*="#thumbnail"] {
+    height: 300px;
+    position: relative;
+    left: 30px;
+}

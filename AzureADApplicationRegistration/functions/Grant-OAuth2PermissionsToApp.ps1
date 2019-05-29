@@ -172,8 +172,11 @@ Function Grant-OAuth2PermissionsToApp {
                     # if there are no application permission ids present in $applicationPermissionsScope it means they have been removed from the app itself.
                     else {
                         foreach ($permission in $spApplicationPermissions) {
-                            Write-Output ("Removing application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $permission.ObjectId)
-                            Remove-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -AppRoleAssignmentId $permission.ObjectId
+
+                            if ($permission.ObjectId) {
+                                Write-Output ("Removing application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $permission.ObjectId)
+                                Remove-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -AppRoleAssignmentId $permission.ObjectId
+                            }
                         }
                     }
                 }
@@ -222,8 +225,11 @@ Function Grant-OAuth2PermissionsToApp {
             # if there are no application permission ids present in $applicationPermissionsScope it means they have been removed from the app itself.
             else {
                 foreach ($permission in $spApplicationPermissions) {
-                    Write-Output ("Removing application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $permission.ObjectId)
-                    Remove-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -AppRoleAssignmentId $permission.ObjectId
+
+                    if ($permission.ObjectId) {
+                        Write-Output ("Removing application permission {0} with id {1}" -f $oAuth2ServicePrincipal.value.DisplayName, $permission.ObjectId)
+                        Remove-AzureADServiceAppRoleAssignment -ObjectId $azureADAppSP.ObjectId -AppRoleAssignmentId $permission.ObjectId
+                    }
                 }
             }
         }
